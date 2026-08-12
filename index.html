@@ -266,12 +266,12 @@
             <p class="text-xs text-gray-500 mt-1">8 digits, a dash, then the task number (e.g. 12345678-1)</p>
             <p id="orderWoError" class="text-danger-red font-semibold text-sm mt-2 hidden">Enter a WO in the format 12345678-1</p>
 
-            <label class="block text-sm font-semibold text-gray-600 mb-1 mt-4">Location</label>
+            <label class="block text-sm font-semibold text-gray-600 mb-1 mt-4">Deliver To</label>
             <select id="orderLocationInput" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
-                <option value="" selected disabled>Location</option>
+                <option value="" selected disabled>Deliver To</option>
                 <!-- LOCATIONS injected here at load -->
             </select>
-            <p id="orderLocationError" class="text-danger-red font-semibold text-sm mt-2 hidden">Please select a Location</p>
+            <p id="orderLocationError" class="text-danger-red font-semibold text-sm mt-2 hidden">Please select where these should be delivered</p>
 
             <button class="w-full mt-4 py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md" onclick="submitOrderWO()">
                 Continue
@@ -378,7 +378,7 @@
                 <thead>
                     <tr class="text-sm uppercase text-gray-600 border-b border-gray-300">
                         <th class="py-3 px-4">WO #</th>
-                        <th class="py-3 px-4">Location</th>
+                        <th class="py-3 px-4">Deliver To</th>
                         <th class="py-3 px-4">Material</th>
                         <th class="py-3 px-4">Size</th>
                         <th class="py-3 px-4">Class</th>
@@ -438,7 +438,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.12"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.15"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -1120,10 +1120,8 @@
     function openOrderEmailDraft() {
         const uniqueWOs = [...new Set(orderCart.map(i => i.wo))];
         const subject = `Poles Order - WOs: ${uniqueWOs.join(', ')}`;
-        let body = `POLES ORDER ${APP_VERSION}\n\n`;
-        orderCart.forEach(i => body += `WO: ${i.wo} | Loc: ${i.location} | ${i.material} | Size: ${i.size} ft | Class: ${i.cls} | Qty: ${i.qty}\n`);
 
-        // Combine To/CC recipients across every distinct location present in this order
+        // Combine To/CC recipients across every distinct delivery location present in this order
         const uniqueLocations = [...new Set(orderCart.map(i => i.location).filter(Boolean))];
         const toSet = new Set();
         const ccSet = new Set();
@@ -1136,6 +1134,18 @@
         const to = [...toSet].map(e => encodeURIComponent(e)).join(',');
         const cc = [...ccSet].map(e => encodeURIComponent(e)).join(',');
 
+        function formatLocationList(locations) {
+            if (locations.length === 0) return 'the selected location';
+            if (locations.length === 1) return locations[0];
+            if (locations.length === 2) return `${locations[0]} and ${locations[1]}`;
+            return `${locations.slice(0, -1).join(', ')}, and ${locations[locations.length - 1]}`;
+        }
+
+        const deliveryLocationText = formatLocationList(uniqueLocations);
+        let body = `Hello,\n\n\nCould we get the following poles delivered to ${deliveryLocationText}.\nThanks!\n\n\n`;
+        body += `POLES ORDER ${APP_VERSION}\n\n\n`;
+        orderCart.forEach(i => body += `WO: ${i.wo} | Deliver To: ${i.location} | ${i.material} | Size: ${i.size} ft | Class: ${i.cls} | Qty: ${i.qty}\n`);
+
         let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         if (cc) mailtoUrl += `&cc=${cc}`;
         window.location.href = mailtoUrl;
@@ -1143,7 +1153,7 @@
     window.openOrderEmailDraft = openOrderEmailDraft;
 
     function downloadOrderCSV() {
-        const headers = ["Date", "WO Number", "Location", "Material", "Size", "Class", "Qty"];
+        const headers = ["Date", "WO Number", "Deliver To", "Material", "Size", "Class", "Qty"];
         const date = new Date().toLocaleDateString();
         const rows = orderCart.map(i => [`"${date}"`, `"${i.wo}"`, `"${i.location}"`, `"${i.material}"`, `"${i.size}"`, `"${i.cls}"`, i.qty]);
         const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
