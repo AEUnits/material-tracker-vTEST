@@ -49,9 +49,12 @@
         }
     </script>
 </head>
-<body class="bg-gray-100 p-4 sm:p-6">
+<body class="bg-gray-100 p-4 sm:p-6 pb-20"> 
 
-<!-- Custom Modal Overlay (replacing alerts and confirms) -->
+<!-- Version badge - fixed top-left, shown on every page -->
+<div id="version-badge" class="fixed top-1 left-1.5 z-[2000] text-[10px] font-semibold text-gray-400 select-none"></div>
+
+<!-- Custom Modal Overlay -->
 <div id="custom-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 z-[1000] hidden justify-center items-center">
     <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-11/12 text-center">
         <h4 id="modal-title" class="text-xl font-bold text-primary-blue mb-3"></h4>
@@ -62,20 +65,34 @@
     </div>
 </div>
 
+<!-- Admin PIN modal -->
+<div id="admin-pin-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 z-[1000] hidden justify-center items-center">
+    <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-11/12 text-center">
+        <h4 class="text-xl font-bold text-primary-blue mb-3">Admin Access</h4>
+        <p class="mb-4 text-gray-700">Enter the admin PIN to continue.</p>
+        <input type="password" id="adminPinInput" placeholder="****" autocomplete="off"
+               class="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-widest mb-2 focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition"
+               onkeydown="if(event.key === 'Enter') checkAdminPin()">
+        <p id="admin-pin-error" class="text-danger-red font-bold mb-3 hidden">Incorrect PIN</p>
+        <div class="flex justify-center gap-3">
+            <button onclick="closeAdminPinModal()" class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150">Cancel</button>
+            <button onclick="checkAdminPin()" class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150">Continue</button>
+        </div>
+    </div>
+</div>
+
 <!-- Datalist for storing WO history -->
 <datalist id="wo-history-list"></datalist>
 
-<!-- VIEW 0: LOGIN SCREEN (NEW) -->
+<!-- VIEW 0: LOGIN SCREEN -->
 <div id="view-login" class="fixed inset-0 bg-gray-100 flex flex-col justify-center items-center z-50">
     <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
         <h1 class="text-2xl font-extrabold text-gray-800 mb-2">Restricted Access</h1>
         <p class="text-gray-500 mb-6">Please enter the passcode to access the Material Tracker.</p>
-        
         <input type="password" id="passcodeInput" 
                class="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-widest mb-4 focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition" 
                placeholder="****"
                onkeydown="if(event.key === 'Enter') checkPasscode()">
-               
         <button onclick="checkPasscode()" 
                 class="w-full py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md">
             Enter Tracker
@@ -86,15 +103,13 @@
 
 <div class="container max-w-6xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-2xl">
     
-    <!-- VIEW 1: TABLE OF CONTENTS (Now hidden by default) -->
+    <!-- VIEW 1: TABLE OF CONTENTS -->
     <div id="view-toc" class="hidden">
         <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-4 border-b-2 border-gray-200">
             <h1 class="text-2xl font-extrabold text-gray-800">Material Categories</h1>
             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-3 sm:mt-0">
                 <div class="flex items-center gap-2">
-                    <!-- Data Status Badge -->
                     <span id="db-status-badge" class="px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm"></span>
-                    <!-- Sync Button -->
                     <button onclick="syncFromEmbeddedSheet()" title="Force Sync from Google Sheets" 
                             class="p-2 bg-white text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 hover:text-primary-blue transition shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -108,13 +123,11 @@
             </div>
         </header>
         
-        <!-- NEW: Global Search Bar -->
+        <!-- Global Search -->
         <div class="mb-8 relative">
-            <label for="globalSearch" class="sr-only">Search All Materials</label>
             <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <!-- Heroicon name: solid/search -->
-                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                         <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
                     </svg>
                 </div>
@@ -131,31 +144,21 @@
             </div>
         </div>
 
-        <p class="mb-5 text-gray-600">Please select a category to view materials or go directly to your review list.</p>
-
         <div id="toc-buttons" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <!-- Category buttons injected by JS -->
             <div class="p-6 text-center text-gray-500 font-semibold col-span-full">Loading categories...</div>
         </div>
     </div>
 
-    <!-- VIEW 2: SELECTION PAGE (Now hidden by default) -->
+    <!-- VIEW 2: SELECTION PAGE -->
     <div id="view-selection" class="hidden">
-        <!-- UPDATED HEADER: Single line layout -->
         <header class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-2 border-b border-gray-200">
-            
             <div class="flex items-center gap-3 overflow-hidden">
                 <h1 class="text-xl sm:text-2xl font-extrabold text-gray-800 whitespace-nowrap">Material Tracker</h1>
-                
-                <!-- Category Display -->
                 <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm whitespace-nowrap">
                     <span class="text-xs font-semibold text-gray-500 mr-2 uppercase tracking-wider hidden md:inline">Category:</span>
                     <strong id="current-filter-category" class="text-primary-blue text-sm sm:text-base">All Materials</strong>
-                    <!-- Clear button removed -->
                 </div>
             </div>
-
-            <!-- Buttons -->
             <div class="flex items-center gap-2 flex-shrink-0">
                 <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150 whitespace-nowrap" onclick="goToToc()">
                     &larr; Categories
@@ -166,7 +169,6 @@
             </div>
         </header>
 
-        <!-- UPDATED COMPACT SEARCH (Now with Manual Search Button) -->
         <div class="mb-3 flex gap-2">
             <div class="relative flex-grow">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -174,35 +176,34 @@
                         <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
                     </svg>
                 </div>
-                <!-- Removed onkeyup, added onkeydown for Enter key -->
                 <input type="text" id="searchInput" class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-300 focus:border-primary-blue transition shadow-sm" 
                        placeholder="Search materials by CU, ID, or Description..." 
                        onkeydown="if(event.key === 'Enter') filterMaterials()">
             </div>
-            <!-- New Manual Search Button -->
             <button onclick="filterMaterials()" class="px-4 py-2 bg-primary-blue text-white font-bold rounded-md hover:bg-blue-700 transition shadow-sm text-sm">
                 Search
             </button>
         </div>
 
-        <!-- PAGINATION CONTROLS (UPDATED) -->
-        <div id="pagination-top" class="mb-2 bg-gray-50 p-2 rounded-md border border-gray-200 hidden">
-            <!-- Injected via JS -->
-        </div>
+        <div id="pagination-top" class="mb-2 bg-gray-50 p-2 rounded-md border border-gray-200 hidden"></div>
         
         <div class="table-container">
             <table id="materialTable" class="w-full text-left">
                 <thead>
                     <tr class="text-sm uppercase text-gray-600 border-b border-gray-300">
-                        <!-- UPDATED: Swapped Column Order -->
                         <th class="py-3 px-4">ID</th>
                         <th class="py-3 px-4">CU / Description</th>
-                        <th class="py-3 px-4">Controls (WO / Type / Loc / Qty)</th>
+                        <th class="py-2 px-4">
+                            <div class="hidden lg:flex items-center gap-2 normal-case text-xs font-semibold tracking-normal">
+                                <span class="w-32 lg:w-36">WO</span>
+                                <span class="w-24">Type</span>
+                                <span class="w-40">Loc</span>
+                                <span class="w-16 text-center">Qty</span>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
-                <tbody id="materialTableBody">
-                    <!-- Data injected via JS -->
-                </tbody>
+                <tbody id="materialTableBody"></tbody>
             </table>
         </div>
     </div>
@@ -211,16 +212,17 @@
     <div id="view-review" class="hidden">
         <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
             <h1 class="text-2xl font-extrabold text-gray-800">Review & Send</h1>
-            <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goBack()">
-                &larr; Back to Selection
-            </button>
+            <div class="flex items-center gap-2">
+                <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goBack()">
+                    &larr; Back to Selection
+                </button>
+            </div>
         </header>
 
         <div class="bg-gray-200 p-4 rounded-lg mb-6 border border-gray-300">
             <p class="font-semibold text-gray-800">Total Transactions Selected: <span id="totalItemsCount" class="text-primary-blue font-extrabold">0</span></p>
         </div>
 
-        <h3 class="text-xl font-semibold mb-3 text-gray-700">Material List Summary</h3>
         <div class="table-container">
             <table id="reviewTable" class="w-full text-left">
                 <thead>
@@ -234,132 +236,293 @@
                         <th class="py-3 px-4">Action</th>
                     </tr>
                 </thead>
-                <tbody id="reviewTableBody">
-                    <!-- Selected items injected via JS -->
-                </tbody>
+                <tbody id="reviewTableBody"></tbody>
             </table>
         </div>
 
-        <div class="mt-8 pt-6 border-t border-gray-300">
-            <button class="w-full px-6 py-4 text-lg bg-success-green text-white font-extrabold rounded-lg hover:bg-green-700 transition duration-150 shadow-xl" onclick="openEmailDraft()">
+        <div class="mt-8 pt-6 border-t border-gray-300 flex flex-col sm:flex-row gap-4">
+            <button class="flex-1 px-6 py-4 text-lg bg-gray-600 text-white font-extrabold rounded-lg hover:bg-gray-700 transition duration-150 shadow-xl" onclick="downloadCSV()">
+                Download CSV
+            </button>
+            <button class="flex-1 px-6 py-4 text-lg bg-success-green text-white font-extrabold rounded-lg hover:bg-green-700 transition duration-150 shadow-xl" onclick="openEmailDraft()">
                 Send List (Open Email App)
             </button>
         </div>
     </div>
 
+    <!-- VIEW 4: ADMIN - POLES ORDER - WO ENTRY -->
+    <div id="view-order-wo" class="hidden">
+        <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
+            <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
+            <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToToc()">
+                &larr; Categories
+            </button>
+        </header>
+        <div class="max-w-md">
+            <label class="block text-sm font-semibold text-gray-600 mb-1">WO #</label>
+            <input type="text" id="orderWoInput" placeholder="12345678-1" autocomplete="off"
+                   class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition"
+                   onkeydown="if(event.key === 'Enter') submitOrderWO()">
+            <p class="text-xs text-gray-500 mt-1">8 digits, a dash, then the task number (e.g. 12345678-1)</p>
+            <p id="orderWoError" class="text-danger-red font-semibold text-sm mt-2 hidden">Enter a WO in the format 12345678-1</p>
+
+            <label class="block text-sm font-semibold text-gray-600 mb-1 mt-4">Location</label>
+            <select id="orderLocationInput" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
+                <option value="" selected disabled>Location</option>
+                <!-- LOCATIONS injected here at load -->
+            </select>
+            <p id="orderLocationError" class="text-danger-red font-semibold text-sm mt-2 hidden">Please select a Location</p>
+
+            <button class="w-full mt-4 py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md" onclick="submitOrderWO()">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW 5: ADMIN - POLES ORDER - SIZE SELECTION -->
+    <div id="view-order-sizes" class="hidden">
+        <header class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-gray-200">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
+                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm">
+                    <span class="text-xs font-semibold text-gray-500 mr-2 uppercase tracking-wider">WO:</span>
+                    <strong id="order-wo-display" class="text-primary-blue"></strong>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150" onclick="goToOrderWO()">
+                    &larr; Back
+                </button>
+                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md" onclick="goToOrderReview()">
+                    Order List (<span id="order-cart-counter-1">0</span>) &rarr;
+                </button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-2 gap-3 mb-6 max-w-md">
+            <button id="orderBtnWood" class="py-4 rounded-lg font-bold text-lg transition" onclick="setOrderMaterial('wood')">Wood Poles</button>
+            <button id="orderBtnConcrete" class="py-4 rounded-lg font-bold text-lg transition" onclick="setOrderMaterial('concrete')">Concrete Poles</button>
+        </div>
+
+        <div id="order-size-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+    </div>
+
+    <!-- VIEW 6: ADMIN - POLES ORDER - CLASS SELECTION -->
+    <div id="view-order-classes" class="hidden">
+        <header class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-gray-200">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
+                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm">
+                    <strong id="order-classes-breadcrumb" class="text-primary-blue text-sm"></strong>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150" onclick="goToOrderSizes()">
+                    &larr; Back
+                </button>
+                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md" onclick="goToOrderReview()">
+                    Order List (<span id="order-cart-counter-2">0</span>) &rarr;
+                </button>
+            </div>
+        </header>
+
+        <div id="order-class-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+    </div>
+
+    <!-- VIEW 7: ADMIN - POLES ORDER - QUANTITY -->
+    <div id="view-order-qty" class="hidden">
+        <header class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-gray-200">
+            <div class="flex items-center gap-3">
+                <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
+                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm">
+                    <strong id="order-qty-breadcrumb" class="text-primary-blue text-sm"></strong>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150" onclick="goToOrderClasses()">
+                    &larr; Back
+                </button>
+                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md" onclick="goToOrderReview()">
+                    Order List (<span id="order-cart-counter-3">0</span>) &rarr;
+                </button>
+            </div>
+        </header>
+
+        <div class="max-w-xs">
+            <label class="block text-sm font-semibold text-gray-600 mb-1">Quantity</label>
+            <input type="number" min="1" value="1" id="orderQtyInput"
+                   class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg text-center focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
+            <button class="w-full mt-4 py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md" onclick="addToOrderCart()">
+                Add to Order
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW 8: ADMIN - POLES ORDER - REVIEW -->
+    <div id="view-order-review" class="hidden">
+        <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
+            <h1 class="text-2xl font-extrabold text-gray-800">Poles Order - Review & Send</h1>
+            <div class="flex items-center gap-2">
+                <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToOrderSizes()">
+                    &larr; Back to Order
+                </button>
+            </div>
+        </header>
+
+        <div class="bg-gray-200 p-4 rounded-lg mb-6 border border-gray-300">
+            <p class="font-semibold text-gray-800">Total Poles Selected: <span id="orderTotalItemsCount" class="text-primary-blue font-extrabold">0</span></p>
+        </div>
+
+        <div class="table-container">
+            <table id="orderReviewTable" class="w-full text-left">
+                <thead>
+                    <tr class="text-sm uppercase text-gray-600 border-b border-gray-300">
+                        <th class="py-3 px-4">WO #</th>
+                        <th class="py-3 px-4">Location</th>
+                        <th class="py-3 px-4">Material</th>
+                        <th class="py-3 px-4">Size</th>
+                        <th class="py-3 px-4">Class</th>
+                        <th class="py-3 px-4">Qty</th>
+                        <th class="py-3 px-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="orderReviewTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="mt-8 pt-6 border-t border-gray-300 flex flex-col sm:flex-row gap-4">
+            <button class="flex-1 px-6 py-4 text-lg bg-gray-600 text-white font-extrabold rounded-lg hover:bg-gray-700 transition duration-150 shadow-xl" onclick="downloadOrderCSV()">
+                Download CSV
+            </button>
+            <button class="flex-1 px-6 py-4 text-lg bg-success-green text-white font-extrabold rounded-lg hover:bg-green-700 transition duration-150 shadow-xl" onclick="openOrderEmailDraft()">
+                Send List (Open Email App)
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button for Clearing WO History -->
+<div id="utility-buttons" class="fixed bottom-4 right-4 z-40 hidden">
+    <button onclick="confirmClearWOHistory()" 
+            title="Clear WO History Suggestions"
+            class="p-2 bg-white text-gray-400 border border-gray-200 rounded-full shadow-lg hover:text-danger-red hover:bg-red-50 hover:border-red-200 transition-all duration-200 flex items-center gap-2 group">
+        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Clear WO History</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+    </button>
+</div>
+
+<div id="admin-trigger" class="fixed bottom-4 left-4 z-40 hidden">
+    <button onclick="openAdminPinModal()"
+            title="Admin"
+            class="p-2 bg-white text-gray-300 border border-gray-100 rounded-full shadow-sm hover:text-gray-500 hover:bg-gray-50 hover:border-gray-200 transition-all duration-200 flex items-center gap-2 group">
+        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Admin</span>
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+    </button>
 </div>
 
 <script type="module">
-    // --- CANVAS ENVIRONMENT VARIABLES (Mandatory inclusion for context) ---
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    console.log(`App ID: ${appId}, Firebase Config Loaded: ${Object.keys(firebaseConfig).length > 0}`);
-    // ---------------------------------------------------------------------
-
-    // Polyfill for crypto.randomUUID for broader compatibility
-    if (typeof crypto.randomUUID !== 'function') {
-        crypto.randomUUID = function() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        };
-    }
-
-    // --- UPDATED: LINK TO YOUR SPECIFIC SHEET ---
-    const EMBEDDED_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBmb-80reVNE4qZ_OvQ3_USfQNJHsjnmFvHXE733_4ijrIlsSvR0Mz9Wl6cbXcBtbod98pJrN4HPyL/pub?output=csv";
-    
-    // --- LOGIN CONFIGURATION ---
-    const APP_PASSCODE = "1945"; 
-    // ---------------------------
-
-    // --- 1. STATE VARIABLES ---
+    // --- STATE VARIABLES ---
     let materialDB = [];
     let woHistory = [];
     let cart = [];
-
-    // PAGINATION VARIABLES
     let currentPage = 1;
     const itemsPerPage = 200;
     let currentFilteredList = []; 
     
-    // NEW: Static list of categories for the Table of Contents
+    const EMBEDDED_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBmb-80reVNE4qZ_OvQ3_USfQNJHsjnmFvHXE733_4ijrIlsSvR0Mz9Wl6cbXcBtbod98pJrN4HPyL/pub?output=csv";
+    const APP_PASSCODE = "1945"; 
+    const ADMIN_PIN = "2026";
+    let adminUnlocked = false;
+    const APP_VERSION = "v8.1.12"; // Update this on every new version - shows in the corner badge and on every emailed report
+
+    const LOCATIONS = [
+        "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
+        "Haines City Jingoli", "Winter Garden Jingoli", "Orlando Jingoli",
+        "Apopka Jingoli", "Altamonte Jingoli", "Deland Jingoli",
+        "Costal Jingoli", "Seven Springs Jingoli", "Ocala Jingoli", "Jasper Jingoli"
+    ];
+
+    // Default email recipients per Location for the Poles Order email draft.
+    // Multiple addresses can be comma-separated within a single string, e.g. "a@x.com,b@x.com"
+    const DEFAULT_CC = '"DEF Material" <defmaterial@pike.com>';
+    const LOCATION_EMAILS = {
+        "Frostproof Pike Yard":  { to: "PD-HIGHLANDS@duke-energy.com", cc: DEFAULT_CC },
+        "Dundee Pike Yard":      { to: "PD-LAKEWALES@duke-energy.com", cc: DEFAULT_CC },
+        "Sebring Pike Yard":     { to: "PD-HIGHLANDS@duke-energy.com", cc: DEFAULT_CC },
+        "Haines City Jingoli":   { to: "jsilva@jingolipower.com", cc: DEFAULT_CC },
+        "Winter Garden Jingoli": { to: "Jose.Gonzales2@duke-energy.com", cc: DEFAULT_CC },
+        "Orlando Jingoli":       { to: "preyes@jingolipower.com", cc: DEFAULT_CC },
+        "Apopka Jingoli":        { to: "stephen.lagasse@jingolipower.com", cc: DEFAULT_CC },
+        "Altamonte Jingoli":     { to: "diego.martinez@jbmenergysolutions.com", cc: DEFAULT_CC },
+        "Deland Jingoli":        { to: "lmills@jbmenergysolutions.com", cc: DEFAULT_CC },
+        "Costal Jingoli":        { to: "msimon@jingolipower.com", cc: DEFAULT_CC },
+        "Seven Springs Jingoli": { to: "jrhoades@jingolipower.com", cc: DEFAULT_CC },
+        "Ocala Jingoli":         { to: "tdibiasio@jingolipower.com", cc: DEFAULT_CC },
+        "Jasper Jingoli":        { to: "robert.claxton@duke-energy.com", cc: DEFAULT_CC }
+    };
+
+    // --- POLES ORDER (ADMIN) STATE & DATA ---
+    let orderCart = [];
+    let orderWO = '';
+    let orderLocation = '';
+    let orderMaterial = 'wood';
+    let orderSize = null;
+    let orderClass = null;
+    const POLE_SIZES = ["30", "35", "40", "45", "50", "55", "60", "65"];
+    // Wood classes confirmed by user. Concrete is still PLACEHOLDER data pending confirmation.
+    const POLE_CLASSES = {
+        wood: {
+            "30": ["6"],
+            "35": ["2", "3", "5"],
+            "40": ["1", "2", "3", "4", "5", "H1"],
+            "45": ["1", "2", "3", "4", "H1", "H2"],
+            "50": ["1", "2", "3", "H1", "H3"],
+            "55": ["1", "2", "3", "H1", "H2", "H3"],
+            "60": ["H1"],
+            "65": []
+        },
+        concrete: { "30": ["6"], "35": ["5", "6"], "40": ["4", "5"], "45": ["3", "4"], "50": ["2", "3"], "55": ["2"], "60": ["1"], "65": ["1"] }
+    };
+
     const STATIC_CATEGORIES = [
-        "Arresters",
-        "Brackets", // <--- Added Here
-        "Capacitors",
-        "Conduit",
-        "Controllers",
-        "Crossarms",
-        "Enclosures",
-        "Fuse/Cutout",
-        "Indicators",
-        "Light/Fixtures",
-        "Poles",
-        "Reclosers",
-        "Regulators",
-        "Concrete/Structures",
-        "Switches",
-        "Switchgears",
-        "Transformers",
-        "Wire/Cables"
+        "Arresters", "Brackets", "Capacitors", "Conduit", "Controllers", "Crossarms",
+        "Enclosures", "Fuse/Cutout", "Indicators", "Light/Fixtures", "Poles",
+        "Reclosers", "Regulators", "Concrete/Structures", "Switches", "Switchgears",
+        "Transformers", "Wire/Cables"
     ];
     
-    // NEW: Mappings to handle differences between Button Name and Google Sheet Data
     const CATEGORY_ALIASES = {
-        "Brackets": ["Brackets", "Bracket"], // <--- Added Alias Mapping
+        "Brackets": ["Brackets", "Bracket"],
         "Fuse/Cutout": ["Fuse Cutouts", "Fuse Cutout", "Fuse/Cutout", "Fuse / Cutout"],
         "Light/Fixtures": ["Light Fixtures", "Light Fixture", "Light/Fixtures", "Light / Fixtures"],
         "Concrete/Structures": ["Concrete Structures", "Concrete Structure", "Concrete/Structures", "Concrete / Structures"]
     };
 
-    // UPDATED Sample data to use the specific categories
-    const sampleData = [
-        { cu: "Distribution Arrester, 10kV", id: "ARR-10KV", desc: "Polymer distribution class arrester", category: "Arresters" },
-        { cu: "Power Capacitor, 15kVAR", id: "CAP-15KVAR", desc: "Single phase 15kVAR capacitor bank", category: "Capacitors" },
-        { cu: "Rigid Steel Conduit, 1in", id: "CON-RSC-1IN", desc: "1 inch diameter rigid steel conduit", category: "Conduit" },
-        { cu: "Pole, Wood Class 4, 40ft", id: "POLE-W4-40", desc: "Treated wood pole, class 4, 40 feet", category: "Poles" },
-        { cu: "Transformer, Pad Mount, 50kVA", id: "XFR-PM-50", desc: "50kVA pad mount distribution transformer", category: "Transformers" },
-        { cu: "Aluminum Conductor, 4/0 ACSR", id: "WIRE-4/0AS", desc: "4/0 ACSR bare aluminum wire", category: "Wire/Cables" }
-    ];
-
-    // --- CUSTOM MODAL DIALOG FUNCTIONS (Replacing alert() and confirm()) ---
-
-    /**
-     * Shows a custom alert modal.
-     * @param {string} message The message to display.
-     * @param {string} [title='Alert'] The title of the modal.
-     */
+    // --- UTILITIES ---
     function showCustomAlert(message, title = 'Attention') {
         const modal = document.getElementById('custom-modal');
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-message').innerText = message;
-        
         const buttons = document.getElementById('modal-buttons');
         buttons.innerHTML = `<button class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150" onclick="closeModal()">OK</button>`;
-        
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
 
-    /**
-     * Shows a custom confirmation modal.
-     * @param {string} message The confirmation message.
-     * @param {function} callback The function to execute if 'Yes' is clicked.
-     */
     function showCustomConfirm(message, callback) {
         const modal = document.getElementById('custom-modal');
         document.getElementById('modal-title').innerText = 'Confirm Action';
         document.getElementById('modal-message').innerText = message;
-        
         const buttons = document.getElementById('modal-buttons');
         buttons.innerHTML = `
             <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150" onclick="closeModal(); callback(false);">Cancel</button>
             <button class="px-4 py-2 bg-success-green text-white font-bold rounded-lg hover:bg-green-700 transition duration-150" onclick="closeModal(); callback(true);">Yes, Proceed</button>
         `;
-        
-        // Assign callback to modal context for execution
         window.callback = callback;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -369,720 +532,629 @@
         const modal = document.getElementById('custom-modal');
         modal.classList.add('hidden');
         modal.classList.remove('flex');
-        window.callback = null; // Clean up callback
+        window.callback = null;
     }
 
-    // Expose modal functions globally for HTML calls
     window.showCustomAlert = showCustomAlert;
     window.showCustomConfirm = showCustomConfirm;
     window.closeModal = closeModal;
 
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
-    // --- 2. INITIALIZATION & SYNC ---
+    function compareMaterials(a, b) {
+        const aPriority = a.priority === 'P' ? 0 : 1;
+        const bPriority = b.priority === 'P' ? 0 : 1;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+
+        // Wood poles (POLE-WD) are used far more often than concrete poles (POLE-CTE),
+        // so force WD to sort before CTE even though "C" would normally come before "W".
+        // Everything else, including ordering within the WD group and within the CTE
+        // group, still follows normal A-Z order.
+        const aIsWD = a.cu.startsWith('POLE-WD');
+        const bIsWD = b.cu.startsWith('POLE-WD');
+        const aIsCTE = a.cu.startsWith('POLE-CTE');
+        const bIsCTE = b.cu.startsWith('POLE-CTE');
+        if (aIsWD && bIsCTE) return -1;
+        if (aIsCTE && bIsWD) return 1;
+
+        return a.cu.localeCompare(b.cu);
+    }
+
+    // --- INITIALIZATION ---
     window.onload = () => {
-        // NOTE: We do NOT load data immediately. We wait for passcode check.
-        // If user previously logged in (sessionStorage), we can skip.
+        document.getElementById('version-badge').innerText = APP_VERSION;
         if (sessionStorage.getItem('isLoggedIn') === 'true') {
             unlockApp();
         }
+        if (sessionStorage.getItem('adminUnlocked') === 'true') {
+            adminUnlocked = true;
+        }
     };
 
-    // --- LOGIN LOGIC ---
     function checkPasscode() {
         const input = document.getElementById('passcodeInput');
-        const errorMsg = document.getElementById('login-error');
-        
         if (input.value === APP_PASSCODE) {
             sessionStorage.setItem('isLoggedIn', 'true');
             unlockApp();
         } else {
-            errorMsg.classList.remove('hidden');
+            document.getElementById('login-error').classList.remove('hidden');
             input.value = '';
-            input.focus();
         }
     }
+    window.checkPasscode = checkPasscode;
     
     function unlockApp() {
         document.getElementById('view-login').classList.add('hidden');
         document.getElementById('view-toc').classList.remove('hidden');
-        
-        // Start the app logic now
+        document.getElementById('utility-buttons').classList.remove('hidden');
+        document.getElementById('admin-trigger').classList.remove('hidden');
         loadSettings();
-        initialLoadAndSync();
+        syncFromEmbeddedSheet();
         updateCartCounter();
+        populateOrderLocationSelect();
+    }
+
+    function populateOrderLocationSelect() {
+        const select = document.getElementById('orderLocationInput');
+        LOCATIONS.forEach(loc => {
+            const opt = document.createElement('option');
+            opt.value = loc;
+            opt.textContent = loc;
+            select.appendChild(opt);
+        });
     }
     
-    window.checkPasscode = checkPasscode;
-
     function loadSettings() {
         const savedWOs = localStorage.getItem('woHistory');
         if(savedWOs) woHistory = JSON.parse(savedWOs);
         updateDatalist();
     }
 
-    function updateCartCounter() {
-        document.getElementById('cart-counter').innerText = cart.length;
-        document.getElementById('selection-cart-counter').innerText = cart.length;
-    }
-
-    function initialLoadAndSync() {
-        // Check if the URL is the placeholder. If so, use cached/sample data.
-        if (EMBEDDED_SHEET_URL.includes("INSERT_YOUR_PUBLISHED_GOOGLE_SHEET_CSV_LINK_HERE")) {
-            loadDatabaseFromLocalStorage();
-        } else {
-            syncFromEmbeddedSheet();
-        }
-    }
-
-    // Helper to clean badge classes
-    function updateBadge(html, colorClass, removeClasses) {
-        const statusBadge = document.getElementById('db-status-badge');
-        if(!statusBadge) return; // Safety check
-        statusBadge.innerHTML = html;
-        statusBadge.classList.remove(...removeClasses);
-        statusBadge.classList.add(colorClass);
-    }
-
-    function loadDatabaseFromLocalStorage() {
-        const savedData = localStorage.getItem('materialDB');
-        const allColorClasses = ['bg-blue-100', 'text-primary-blue', 'bg-yellow-100', 'text-yellow-800', 'bg-red-100', 'text-danger-red', 'bg-blue-50', 'text-blue-600', 'bg-green-100', 'text-success-green'];
-        
-        if (savedData) {
-            materialDB = JSON.parse(savedData);
-            updateBadge(
-                `<span class="text-lg">&#128214;</span> ${materialDB.length} Items (Cached)`, 
-                'bg-blue-100', 
-                allColorClasses
-            );
-            const badge = document.getElementById('db-status-badge');
-            if(badge) badge.classList.add('text-primary-blue');
-        } else {
-            materialDB = sampleData;
-            updateBadge(
-                `<span class="text-lg">&#9888;</span> Sample Data`, 
-                'bg-yellow-100', 
-                allColorClasses
-            );
-            const badge = document.getElementById('db-status-badge');
-            if(badge) badge.classList.add('text-yellow-800');
-        }
-        
-        renderToc(); // Only need to render the static TOC now
-    }
-
     async function syncFromEmbeddedSheet() {
         const statusBadge = document.getElementById('db-status-badge');
         if(!statusBadge) return;
-
-        const allColorClasses = ['bg-blue-100', 'text-primary-blue', 'bg-yellow-100', 'text-yellow-800', 'bg-red-100', 'text-danger-red', 'bg-blue-50', 'text-blue-600', 'bg-green-100', 'text-success-green'];
-        
-        updateBadge(
-            `<span class="text-lg">&#8635;</span> Syncing...`, 
-            'bg-blue-50', 
-            allColorClasses
-        );
-        statusBadge.classList.add('text-blue-600');
-
+        statusBadge.innerHTML = `<span class="text-lg">&#8635;</span> Syncing...`;
         try {
-            // --- OPTION 2 CLEAN VERSION: DIRECT ACCESS (NO PROXY) ---
-            // Since we are hosting on GitHub, we attempt a direct fetch first.
-            const originalUrl = EMBEDDED_SHEET_URL + "&t=" + new Date().getTime();
-            
-            const response = await fetch(originalUrl);
-            
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await fetch(EMBEDDED_SHEET_URL + "&t=" + new Date().getTime());
+            if (!response.ok) throw new Error("Sync Failed");
             const csvText = await response.text();
-            
-            const loadedCount = parseAndSaveCSV(csvText);
-            
-            if (loadedCount > 0) {
-                updateBadge(
-                    `<span class="text-lg">&#9989;</span> ${loadedCount} Items (Live)`, 
-                    'bg-green-100', 
-                    allColorClasses
-                );
-                statusBadge.classList.add('text-success-green');
-            } else {
-                throw new Error("Parsed 0 items");
+            const results = Papa.parse(csvText, { header: false, skipEmptyLines: true });
+            const rows = results.data;
+            let newData = [];
+            for (let i = 1; i < rows.length; i++) {
+                const cols = rows[i];
+                if (cols.length >= 2 && cols[0] && cols[1]) {
+                    newData.push({
+                        cu: cols[0].trim(),   // Column A - CU: the compatible-unit code, e.g. "ARR-ELBOW-10KV-F" (this is the actual unique key)
+                        id: cols[1].trim(),   // Column B - ID: a numeric material id, can repeat across multiple CU codes
+                        desc: cols[2] ? cols[2].trim() : 'No Description',
+                        category: cols[3] ? cols[3].trim() : 'Uncategorized',
+                        priority: cols[4] ? cols[4].trim().toUpperCase() : ''   // Column E - "P" marks a most-used item to sort first
+                    });
+                }
             }
 
+            // Priority ("P") items first, then alphabetical by CU within each group
+            newData.sort(compareMaterials);
+
+            if (newData.length > 0) {
+                 materialDB = newData;
+                 localStorage.setItem('materialDB', JSON.stringify(materialDB));
+                 statusBadge.innerHTML = `<span class="text-lg">&#9989;</span> ${newData.length} Items`;
+                 renderToc();
+            }
         } catch (error) {
-            console.error('Error syncing embedded sheet:', error);
-            
-            updateBadge(
-                `<span class="text-lg">&#10060;</span> Sync Failed!`, 
-                'bg-red-100', 
-                allColorClasses
-            );
-            statusBadge.classList.add('text-danger-red');
-            
-            // Fallback to local storage on fetch error
-            setTimeout(() => {
-                loadDatabaseFromLocalStorage();
-            }, 2000); // Wait 2 seconds so user sees the "Failed" message before loading cache
+            statusBadge.innerHTML = `<span class="text-lg">&#10060;</span> Offline Mode`;
+            const savedData = localStorage.getItem('materialDB');
+            if (savedData) {
+                materialDB = JSON.parse(savedData);
+                renderToc();
+            }
         }
     }
-    
-    // Expose sync function globally
     window.syncFromEmbeddedSheet = syncFromEmbeddedSheet;
 
-    // --- SHARED CSV PARSER (UPDATED WITH PAPAPARSE) ---
-    function parseAndSaveCSV(csvText) {
-        // Use PapaParse to handle quoted newlines and commas correctly
-        const results = Papa.parse(csvText, {
-            header: false, // We rely on column index, not names (Column A=0, B=1, etc)
-            skipEmptyLines: true
-        });
-
-        const rows = results.data;
-        const newData = [];
-
-        // Assume row 0 is header, start loop at 1
-        for (let i = 1; i < rows.length; i++) {
-            const cols = rows[i];
-            // Ensure we have enough columns. 
-            // We need at least ID (0) and CU (1).
-            if (cols.length >= 2 && cols[0] && cols[1]) {
-                newData.push({
-                    id: cols[0].trim(),
-                    cu: cols[1].trim(),
-                    desc: cols[2] ? cols[2].trim() : 'No Description',
-                    category: cols[3] ? cols[3].trim() : 'Uncategorized'
-                });
-            }
-        }
-        
-        if (newData.length > 0) {
-             materialDB = newData;
-             localStorage.setItem('materialDB', JSON.stringify(materialDB));
-             renderToc();
-             return newData.length;
-        } else {
-             console.warn("CSV Parsing failed or empty");
-             return 0;
-        }
-    }
-    
-    // --- 3. TOC & NAVIGATION (MODIFIED) ---
-    
+    // --- NAVIGATION ---
     function renderToc() {
         const container = document.getElementById('toc-buttons');
         if(!container) return;
-        container.innerHTML = ''; // Clear "Loading..."
-        
-        // Add "All Materials" button first
-        container.innerHTML += `
-            <button class="w-full p-6 bg-primary-blue text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition duration-150" onclick="goToCategory('All Materials')">
-                View All Materials
-            </button>
-        `;
-        
-        // Add buttons for each category using the STATIC_CATEGORIES list
+        container.innerHTML = `<button class="w-full p-6 bg-primary-blue text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition" onclick="goToCategory('All Materials')">View All Materials</button>`;
         STATIC_CATEGORIES.forEach(category => {
-            // FIX: Changed class_name to class
-            container.innerHTML += `
-                <button class="w-full p-6 bg-white text-primary-blue border-2 border-primary-blue font-bold rounded-lg shadow-sm hover:bg-blue-50 transition duration-150" onclick="goToCategory('${category}')">
-                    ${category}
-                </button>
-            `;
+            container.innerHTML += `<button class="w-full p-6 bg-white text-primary-blue border-2 border-primary-blue font-bold rounded-lg shadow-sm hover:bg-blue-50 transition" onclick="goToCategory('${category}')">${category}</button>`;
         });
     }
-    
-    function goToToc() {
-        document.getElementById('view-selection').classList.add('hidden');
-        document.getElementById('view-review').classList.add('hidden');
-        document.getElementById('view-toc').classList.remove('hidden');
-        document.getElementById('searchInput').value = ''; // Clear search on exit
-        document.getElementById('globalSearch').value = ''; // Clear global search on return
+
+    const ALL_VIEWS = ['view-toc', 'view-selection', 'view-review', 'view-order-wo', 'view-order-sizes', 'view-order-classes', 'view-order-qty', 'view-order-review'];
+    function showView(id) {
+        ALL_VIEWS.forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id));
     }
-    
-    function goToCategory(categoryName) {
-        document.getElementById('current-filter-category').innerText = categoryName;
-        document.getElementById('searchInput').value = ''; // Clear search field
-        
-        document.getElementById('view-toc').classList.add('hidden');
-        document.getElementById('view-selection').classList.remove('hidden');
-        
-        // Logic for clear-filter-btn removed
-        
-        filterMaterials(); // Render the filtered list
-    }
-    
-    function clearCategoryFilter() {
-        document.getElementById('current-filter-category').innerText = 'All Materials';
-        // Logic for clear-filter-btn removed
+
+    function goToCategory(cat) {
+        document.getElementById('current-filter-category').innerText = cat;
+        showView('view-selection');
         filterMaterials();
     }
-    
-    // Expose new navigation functions globally
-    window.goToToc = goToToc;
     window.goToCategory = goToCategory;
-    window.clearCategoryFilter = clearCategoryFilter;
-    
-    // NEW: Perform Global Search Function
+
+    function goToToc() {
+        showView('view-toc');
+    }
+    window.goToToc = goToToc;
+
     function performGlobalSearch(term) {
-        if (!term || term.trim() === '') {
-            showCustomAlert("Please enter a search term.", "Search Empty");
-            return;
-        }
-        
-        // 1. Switch to 'All Materials' context (this clears the inner search input)
+        if (!term) return;
         goToCategory('All Materials');
-        
-        // 2. Set the inner search input to our global term
-        const innerSearchInput = document.getElementById('searchInput');
-        innerSearchInput.value = term;
-        
-        // 3. Trigger the filter function to update the table
+        document.getElementById('searchInput').value = term;
         filterMaterials();
     }
     window.performGlobalSearch = performGlobalSearch;
 
-
-    // --- 4. WO HISTORY LOGIC ---
-    function registerWO(wo) {
-        const val = wo.trim().toUpperCase();
-        if(val && !woHistory.includes(val)) {
-            woHistory.push(val);
-            localStorage.setItem('woHistory', JSON.stringify(woHistory)); // Save WOs
-            updateDatalist();
-        }
-    }
-
-    function quickAddFromRow(id) {
-        const input = document.getElementById(`wo-${id}`);
-        const val = input.value.trim();
-
-        if(!val) {
-            showCustomAlert("Please enter a Work Order Number in the box first to add it to the quick list.", "WO Required");
-            input.focus();
-            return;
-        }
-
-        // NEW: Validation for hyphen
-        if (!val.includes('-')) {
-            showCustomAlert("Work Order Number must contain a hyphen '-' followed by a task number (e.g., 56891115-1).", "Invalid Format");
-            input.focus();
-            return;
-        }
-
-        registerWO(val);
-        const btn = document.getElementById(`plus-${id}`);
-        const originalText = btn.innerText;
-        btn.innerText = "✓";
-        btn.classList.add('text-success-green', 'border-success-green');
-        setTimeout(() => {
-            btn.innerText = "+";
-            btn.classList.remove('text-success-green', 'border-success-green');
-        }, 1000);
-    }
-
-    function updateDatalist() {
-        const dl = document.getElementById('wo-history-list');
-        dl.innerHTML = woHistory.map(wo => `<option value="${wo}">`).join('');
-    }
-    
-    // Expose WO history functions globally
-    window.quickAddFromRow = quickAddFromRow;
-
-
-    // --- 5. MATERIAL & SEARCH LOGIC (MODIFIED with Pagination) ---
-    
-    // Handles changes from search bar OR category buttons
+    // --- MATERIAL SEARCH & TABLE ---
     function filterMaterials() {
         const category = document.getElementById('current-filter-category').innerText;
         const term = document.getElementById('searchInput').value.toLowerCase();
-        
-        // 1. Start with the full DB
         let baseData = materialDB;
-        
-        // 2. Filter by Category
+
         if (category !== 'All Materials') {
             baseData = materialDB.filter(item => {
                 const itemCat = item.category.trim();
                 const targetCat = category.trim();
-                
-                // Check 1: Exact Match
-                if (itemCat === targetCat) return true;
-                
-                // Check 2: Alias Match
-                if (CATEGORY_ALIASES[targetCat] && CATEGORY_ALIASES[targetCat].includes(itemCat)) {
-                    return true;
-                }
-                
-                return false;
+                return itemCat === targetCat || (CATEGORY_ALIASES[targetCat] && CATEGORY_ALIASES[targetCat].includes(itemCat));
             });
         }
         
-        // 3. Filter by Search Term
-        if (term.length > 0) {
+        if (term) {
             baseData = baseData.filter(item => 
-                (item.cu && item.cu.toLowerCase().includes(term)) ||
-                (item.id && item.id.toLowerCase().includes(term)) ||
-                (item.desc && item.desc.toLowerCase().includes(term))
+                item.cu.toLowerCase().includes(term) ||
+                item.id.toLowerCase().includes(term) ||
+                item.desc.toLowerCase().includes(term)
             );
         }
 
-        // 4. Store filtered result
-        currentFilteredList = baseData;
-
-        // 5. Reset to Page 1
+        // Always re-sort just in case
+        currentFilteredList = baseData.sort(compareMaterials);
         currentPage = 1;
-
-        // 6. Render
-        renderPaginationAndTable();
-
-        // Scroll table container to top
-        const container = document.querySelector('.table-container');
-        if (container) container.scrollTop = 0;
+        renderTable();
     }
+    window.filterMaterials = filterMaterials;
 
-    // New Render Function handling Pagination
-    function renderPaginationAndTable() {
-        // 1. Calculate Pagination
+    function renderTable() {
         const totalItems = currentFilteredList.length;
         const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-        // Ensure currentPage is safe
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-        if (totalItems === 0) currentPage = 1;
-
-        // 2. Show/Hide Pagination Controls
         const paginationDiv = document.getElementById('pagination-top');
         
         if (totalItems > itemsPerPage) {
             paginationDiv.classList.remove('hidden');
-            
-            // Generate Page Number Buttons
-            let pageButtonsHTML = '';
-            // We limit the max visible buttons if there are too many (optional safety), 
-            // but for ~20 pages (4000 items / 200), showing all is fine and requested.
-            for (let i = 1; i <= totalPages; i++) {
-                const isActive = i === currentPage;
-                const activeClass = isActive 
-                    ? 'bg-primary-blue text-white border-primary-blue font-bold shadow-sm' 
-                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100 hover:text-primary-blue';
-                
-                pageButtonsHTML += `<button onclick="goToPage(${i})" class="px-3 py-1 border rounded-md text-sm transition ${activeClass}">${i}</button>`;
+            let btns = `<button onclick="changePage(-1)" class="px-3 py-1 bg-white border rounded" ${currentPage === 1 ? 'disabled' : ''}>&larr;</button>`;
+            const windowSize = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(windowSize / 2));
+            let endPage = Math.min(totalPages, startPage + windowSize - 1);
+            startPage = Math.max(1, endPage - windowSize + 1);
+            for (let i = startPage; i <= endPage; i++) {
+                btns += `<button onclick="goToPage(${i})" class="px-3 py-1 border rounded ${i === currentPage ? 'bg-primary-blue text-white' : 'bg-white'}">${i}</button>`;
             }
+            btns += `<button onclick="changePage(1)" class="px-3 py-1 bg-white border rounded" ${currentPage === totalPages ? 'disabled' : ''}>&rarr;</button>`;
+            paginationDiv.innerHTML = `<div class="flex justify-center gap-2">${btns}</div>`;
+        } else { paginationDiv.classList.add('hidden'); }
 
-            paginationDiv.innerHTML = `
-                <div class="flex flex-wrap items-center justify-center gap-2">
-                      <button onclick="changePage(-1)" class="px-3 py-1 bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 shadow-sm font-semibold" ${currentPage === 1 ? 'disabled' : ''}>&larr; Prev</button>
-                      
-                      <div class="flex flex-wrap justify-center gap-1">
-                         ${pageButtonsHTML}
-                      </div>
-                      
-                      <button onclick="changePage(1)" class="px-3 py-1 bg-white border border-gray-300 rounded-md hover:bg-gray-100 disabled:opacity-50 shadow-sm font-semibold" ${currentPage === totalPages ? 'disabled' : ''}>Next &rarr;</button>
-                      
-                      <span class="ml-2 text-xs text-gray-500 font-medium hidden sm:inline-block">(${totalItems} items)</span>
-                </div>
-            `;
-        } else {
-            paginationDiv.classList.add('hidden');
-            paginationDiv.innerHTML = '';
-        }
-
-        // 3. Slice Data
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        const endIndex = startIndex + itemsPerPage;
-        const displayData = currentFilteredList.slice(startIndex, endIndex);
-
-        // 4. Render Table Rows
+        const displayData = currentFilteredList.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage);
+        const pageOffset = (currentPage-1)*itemsPerPage;
         const tbody = document.getElementById('materialTableBody');
         tbody.innerHTML = "";
-        
-        if (displayData.length === 0) {
-            const currentCategory = document.getElementById('current-filter-category').innerText;
-            const searchTerm = document.getElementById('searchInput').value;
-            let message = "No materials found.";
-            if (searchTerm) {
-                message = `No materials found for "${searchTerm}" in "${currentCategory}".`;
-            } else {
-                message = `No materials found in "${currentCategory}".`;
-            }
-            tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-500 font-semibold">${message}</td></tr>`;
-            return;
-        }
 
-        displayData.forEach(item => {
-            const safeId = item.id.replace(/[^a-zA-Z0-9-_]/g, ''); 
+        const locationOptions = LOCATIONS.map(loc => `<option value="${loc}">${loc}</option>`).join('');
 
-            // UPDATED: Swapped Column Content
-            const row = `
-                <tr class="hover:bg-gray-50 transition duration-100 border-b border-gray-100">
-                    <td class="py-3 px-4 align-top"><strong>${item.cu}</strong></td>
-                    <td class="py-3 px-4 align-top">
-                        <strong class="text-gray-900">${item.id}</strong><br>
-                        <span class="text-xs text-gray-500">${item.desc}</span>
-                    </td>
+        displayData.forEach((item, i) => {
+            const rowIndex = pageOffset + i;
+            const safeId = 'row' + rowIndex;
+            const matKey = `${item.cu}::${item.id}`;
+            tbody.innerHTML += `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="py-3 px-4 align-top font-bold text-primary-blue">${escapeHtml(item.id)}</td>
+                    <td class="py-3 px-4 align-top"><strong>${escapeHtml(item.cu)}</strong><br><span class="text-xs text-gray-500">${escapeHtml(item.desc)}</span></td>
                     <td class="py-3 px-4 align-top">
                         <div class="flex flex-col space-y-2 lg:flex-row lg:space-y-0 lg:space-x-2 items-start lg:items-center">
-                            
-                            <!-- WO Input & Quick Add -->
-                            <div class="flex items-center">
-                                <input type="text" id="wo-${safeId}" class="p-2 border border-gray-300 rounded-l-lg wo-input w-24 lg:w-28 text-sm" placeholder="WO#" list="wo-history-list">
-                                <button id="plus-${safeId}" class="p-2 border border-gray-300 rounded-r-lg bg-gray-100 text-gray-600 text-sm font-bold hover:bg-gray-200 transition duration-150 shadow-sm" title="Add WO to Quick List" onclick="quickAddFromRow('${safeId}')">+</button>
+                            <div class="flex items-center w-32 lg:w-36">
+                                <input type="text" id="wo-${safeId}" class="p-2 border rounded-l w-full text-sm" placeholder="WO#" list="wo-history-list" autocomplete="off">
+                                <button id="plus-${safeId}" class="p-2 border-y border-r rounded-r bg-gray-100 font-bold" onclick="quickAddFromRow('${safeId}')">+</button>
                             </div>
-
-                            <!-- Type Select -->
-                            <select id="type-${safeId}" class="p-2 border border-gray-300 rounded-lg type-select w-20 lg:w-24 text-sm">
-                                <option value="Issue">Issue</option>
-                                <option value="Credit">Credit</option>
-                            </select>
-
-                            <!-- NEW: Location (From/To) Select -->
-                            <select id="source-${safeId}" class="p-2 border border-gray-300 rounded-lg source-select w-32 lg:w-40 text-sm" title="Source/Destination">
-                                <option value="Pike Sebring">Pike Sebring</option>
-                                <option value="Pike Frostproof">Pike Frostproof</option>
-                                <option value="Pike Dundee">Pike Dundee</option>
-                                <option value="Jingoli HC">Jingoli HC</option>
-                                <option value="Jingoli Orlando">Jingoli Orlando</option>
-                            </select>
-
-                            <!-- Quantity Input -->
-                            <input type="number" min="1" value="1" id="qty-${safeId}" class="p-2 border border-gray-300 rounded-lg qty-input w-16 text-center text-sm">
-                            
-                            <!-- Add Button -->
-                            <button class="p-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md flex-shrink-0" onclick="addToCart('${item.id}', '${safeId}')">
-                                Add
-                            </button>
+                            <select id="type-${safeId}" class="p-2 border rounded text-sm w-24"><option value="" selected disabled>Type</option><option value="Issue">Issue</option><option value="Credit">Credit</option></select>
+                            <select id="source-${safeId}" class="p-2 border rounded text-sm w-40"><option value="" selected disabled>Location</option>${locationOptions}</select>
+                            <input type="number" min="1" value="1" id="qty-${safeId}" class="p-2 border rounded w-16 text-center text-sm">
+                            <button class="p-2 bg-primary-blue text-white font-bold rounded hover:bg-blue-700" onclick="addToCart(${rowIndex}, '${safeId}')">Add</button>
                         </div>
-                        <div id="preview-${safeId}" class="flex flex-wrap gap-2 mt-2">
-                            ${generatePreviewHTML(item.id)}
-                        </div>
+                        <div id="preview-${safeId}" class="flex flex-wrap gap-2 mt-2">${generatePreviewHTML(matKey, safeId)}</div>
                     </td>
                 </tr>
             `;
-            tbody.innerHTML += row;
         });
     }
-    
-    // Change page function
-    window.changePage = function(direction) {
-        currentPage += direction;
-        renderPaginationAndTable();
-        // Scroll table container to top for better UX
-        document.querySelector('.table-container').scrollTop = 0;
-    };
+    window.changePage = (dir) => { currentPage += dir; renderTable(); };
+    window.goToPage = (num) => { currentPage = num; renderTable(); };
 
-    // Go to specific page function
-    window.goToPage = function(pageNumber) {
-        currentPage = pageNumber;
-        renderPaginationAndTable();
-        document.querySelector('.table-container').scrollTop = 0;
-    };
-    
-    window.filterMaterials = filterMaterials;
-    window.addToCart = addToCart;
+    // --- CART LOGIC ---
+    function addToCart(rowIndex, safeId) {
+        const itemObj = currentFilteredList[rowIndex];
+        const qtyRaw = document.getElementById(`qty-${safeId}`).value;
+        const qty = parseInt(qtyRaw, 10);
+        const wo = document.getElementById(`wo-${safeId}`).value.trim().toUpperCase();
+        const type = document.getElementById(`type-${safeId}`).value;
+        const source = document.getElementById(`source-${safeId}`).value;
 
-    function generatePreviewHTML(materialId) {
-        const items = cart.filter(c => c.id === materialId);
-        if (items.length === 0) return '';
-
-        return items.map(item => {
-            const colorClass = item.type === 'Issue' ? 'border-primary-blue' : 'border-danger-red';
-            const bgColorClass = item.type === 'Issue' ? 'bg-blue-50' : 'bg-red-50';
-            const textColorClass = item.type === 'Issue' ? 'text-primary-blue' : 'text-danger-red';
-
-            return `<span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md border-l-4 ${colorClass} ${bgColorClass} shadow-sm">
-                <strong class="mr-1 font-bold ${textColorClass}">${item.wo}</strong> 
-                <span class="text-gray-600 mr-1">(${item.source})</span>
-                ${item.type}: ${item.qty}
-                <span class="ml-2 text-gray-500 cursor-pointer font-extrabold hover:text-gray-800 transition" title="Remove" onclick="removeFromPreview('${item.transactionId}', '${materialId}')">&times;</span>
-            </span>`;
-        }).join('');
-    }
-    
-    window.removeFromPreview = removeFromPreview;
-
-    function removeFromPreview(transactionId, materialId) {
-        const index = cart.findIndex(x => x.transactionId === transactionId);
-        
-        if (index > -1) {
-            cart.splice(index, 1);
-            const safeId = materialId.replace(/[^a-zA-Z0-9-_]/g, '');
-            const container = document.getElementById(`preview-${safeId}`);
-            if(container) {
-                 container.innerHTML = generatePreviewHTML(materialId);
-                 updateCartCounter();
-            }
-        }
-    }
-
-
-    // --- 6. CART LOGIC ---
-    function addToCart(originalId, safeId) {
-        const itemObj = materialDB.find(x => x.id === originalId);
-        const qtyInput = document.getElementById(`qty-${safeId}`);
-        const woInput = document.getElementById(`wo-${safeId}`);
-        const typeInput = document.getElementById(`type-${safeId}`);
-        const sourceInput = document.getElementById(`source-${safeId}`); // New
-        
-        const addButton = document.querySelector(`#materialTableBody button[onclick*="addToCart('${originalId}', '${safeId}')"]`);
-
-
-        const qty = parseInt(qtyInput.value);
-        const wo = woInput.value.trim().toUpperCase();
-        const type = typeInput.value;
-        const source = sourceInput.value; // New
-
-        if (!wo) {
-            showCustomAlert("Please enter a Work Order Number before adding an item.", "WO Required");
-            woInput.focus();
+        if (!wo || !wo.includes('-')) {
+            showCustomAlert("Please enter a valid WO (e.g., 12345678-1).", "WO Invalid");
             return;
         }
-
-        // NEW: Validation for hyphen
-        if (!wo.includes('-')) {
-            showCustomAlert("Work Order Number must contain a hyphen '-' followed by a task number (e.g., 56891115-1).", "Invalid Format");
-            woInput.focus();
+        if (!type) {
+            showCustomAlert("Please select a Type (Issue or Credit).", "Type Required");
             return;
         }
-
-        if (qty <= 0 || isNaN(qty)) {
-             showCustomAlert("Quantity must be a positive number.", "Invalid Quantity");
-             qtyInput.focus();
-             return;
+        if (!source) {
+            showCustomAlert("Please select a Location.", "Location Required");
+            return;
+        }
+        if (isNaN(qty) || qty <= 0 || String(qty) !== qtyRaw.trim()) {
+            showCustomAlert("Please enter a valid whole number quantity.", "Quantity Invalid");
+            return;
         }
 
         registerWO(wo);
+        const matKey = `${itemObj.cu}::${itemObj.id}`;
+        const existing = cart.findIndex(x => x.matKey === matKey && x.wo === wo && x.type === type && x.source === source);
+        if (existing > -1) cart[existing].qty += qty;
+        else cart.push({ ...itemObj, matKey, transactionId: crypto.randomUUID(), qty, wo, type, source });
 
-        // Check if exact same item exists (now including source)
-        const existingIndex = cart.findIndex(x => x.id === originalId && x.wo === wo && x.type === type && x.source === source);
-            
-        if (existingIndex > -1) {
-            cart[existingIndex].qty += qty;
-        } else {
-            cart.push({ 
-                ...itemObj, 
-                transactionId: crypto.randomUUID(),
-                qty: qty,
-                wo: wo,
-                type: type,
-                source: source // New
-            });
-        }
-            
-        const originalText = addButton.innerText;
-        addButton.innerText = "Added!";
-        addButton.classList.remove('bg-primary-blue', 'hover:bg-blue-700');
-        addButton.classList.add('bg-success-green', 'hover:bg-green-700');
-        
-        document.getElementById(`preview-${safeId}`).innerHTML = generatePreviewHTML(originalId);
+        document.getElementById(`preview-${safeId}`).innerHTML = generatePreviewHTML(matKey, safeId);
         updateCartCounter();
-        
-        qtyInput.value = 1;
-
-        setTimeout(() => {
-            addButton.innerText = originalText;
-            addButton.classList.add('bg-primary-blue', 'hover:bg-blue-700');
-            addButton.classList.remove('bg-success-green', 'hover:bg-green-700');
-        }, 800);
+        const btn = document.querySelector(`button[onclick*="addToCart(${rowIndex},"]`);
+        if (btn) {
+            btn.innerText = "✓";
+            setTimeout(() => btn.innerText = "Add", 800);
+        }
     }
+    window.addToCart = addToCart;
 
-    function removeFromCartById(transactionId) {
-        const index = cart.findIndex(item => item.transactionId === transactionId);
-        if (index > -1) {
-            cart.splice(index, 1);
-            renderReview();
+    function generatePreviewHTML(matKey, safeId) {
+        return cart.filter(c => c.matKey === matKey).map(item => `
+            <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded border-l-4 ${item.type === 'Issue' ? 'border-primary-blue bg-blue-50' : 'border-danger-red bg-red-50'}">
+                <strong>${escapeHtml(item.wo)}</strong>: ${item.qty}
+                <span class="ml-2 cursor-pointer font-bold" onclick="removeFromPreview('${item.transactionId}', '${matKey}', '${safeId}')">&times;</span>
+            </span>`).join('');
+    }
+    window.removeFromPreview = (tid, matKey, safeId) => {
+        const idx = cart.findIndex(x => x.transactionId === tid);
+        if (idx > -1) {
+            cart.splice(idx, 1);
+            const el = document.getElementById(`preview-${safeId}`);
+            if(el) el.innerHTML = generatePreviewHTML(matKey, safeId);
             updateCartCounter();
-            // Also update the preview tags on the selection screen
-            filterMaterials();
+        }
+    };
+
+    function updateCartCounter() {
+        const count = cart.length;
+        document.getElementById('cart-counter').innerText = count;
+        document.getElementById('selection-cart-counter').innerText = count;
+    }
+
+    // --- WO HISTORY ---
+    function registerWO(wo) {
+        const val = wo.trim().toUpperCase();
+        if(val && !woHistory.includes(val)) {
+            woHistory.push(val);
+            localStorage.setItem('woHistory', JSON.stringify(woHistory));
+            updateDatalist();
         }
     }
-    
-    window.removeFromCartById = removeFromCartById;
+    function updateDatalist() {
+        document.getElementById('wo-history-list').innerHTML = woHistory.map(wo => `<option value="${wo}">`).join('');
+    }
+    function quickAddFromRow(id) {
+        const input = document.getElementById(`wo-${id}`);
+        if(input.value.includes('-')) registerWO(input.value);
+    }
+    window.quickAddFromRow = quickAddFromRow;
 
+    function confirmClearWOHistory() {
+        showCustomConfirm("Clear saved WO suggestions?", (confirmed) => {
+            if (confirmed) {
+                woHistory = [];
+                localStorage.removeItem('woHistory');
+                updateDatalist();
+            }
+        });
+    }
+    window.confirmClearWOHistory = confirmClearWOHistory;
 
-    // --- 7. NAVIGATION & REVIEW ---
+    // --- REVIEW & EXPORT ---
     function goToReview() {
-        if (cart.length === 0) {
-            showCustomAlert("Your Review List is empty. Please add items on the selection screen.", "Empty List");
-            return;
-        }
-        document.getElementById('view-toc').classList.add('hidden');
-        document.getElementById('view-selection').classList.add('hidden');
-        document.getElementById('view-review').classList.remove('hidden');
+        if (cart.length === 0) return showCustomAlert("Review list is empty.");
+        showView('view-review');
         renderReview();
     }
-    
     window.goToReview = goToReview;
 
-
     function goBack() {
-        document.getElementById('view-review').classList.add('hidden');
-        document.getElementById('view-selection').classList.remove('hidden');
-        // We don't go to TOC, we go back to the selection list we were just on.
-        // We also don't clear the category filter, allowing the user to resume where they left off.
-        filterMaterials(); // Re-render material list to update any previews
+        showView('view-selection');
     }
-    
     window.goBack = goBack;
 
     function renderReview() {
         document.getElementById('totalItemsCount').innerText = cart.length;
-        const tbody = document.getElementById('reviewTableBody');
-        tbody.innerHTML = "";
-
-        const sortedCart = [...cart].sort((a, b) => a.wo.localeCompare(b.wo));
-
-        sortedCart.forEach(item => {
-            const badgeClass = item.type === 'Issue' ? 'bg-green-100 text-success-green' : 'bg-red-100 text-danger-red';
-
-            tbody.innerHTML += `
-                <tr class="hover:bg-gray-50 transition duration-100 border-b border-gray-100">
-                    <td class="py-3 px-4 font-mono text-sm">${item.wo}</td>
-                    <td class="py-3 px-4"><span class="px-2 py-1 rounded-md text-xs font-semibold ${badgeClass}">${item.type}</span></td>
-                    <td class="py-3 px-4 text-sm text-gray-700">${item.source}</td>
-                    <td class="py-3 px-4 font-bold text-gray-800">${item.cu}</td>
-                    <td class="py-3 px-4 text-sm text-gray-600">${item.desc}</td>
-                    <td class="py-3 px-4 font-extrabold">${item.qty}</td>
-                    <td class="py-3 px-4">
-                        <button class="px-3 py-1 bg-danger-red text-white font-medium rounded-md text-xs hover:bg-red-600 transition" onclick="removeFromCartById('${item.transactionId}')">Remove</button>
-                    </td>
-                </tr>
-            `;
-        });
+        document.getElementById('reviewTableBody').innerHTML = cart.sort((a,b) => a.wo.localeCompare(b.wo)).map(item => `
+            <tr class="border-b">
+                <td class="py-3 px-4 font-mono">${escapeHtml(item.wo)}</td>
+                <td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs font-bold ${item.type === 'Issue' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${escapeHtml(item.type)}</span></td>
+                <td class="py-3 px-4 text-sm">${escapeHtml(item.source)}</td>
+                <td class="py-3 px-4 font-bold">${escapeHtml(item.id)}</td>
+                <td class="py-3 px-4 text-xs">${escapeHtml(item.desc)}</td>
+                <td class="py-3 px-4 font-extrabold">${item.qty}</td>
+                <td class="py-3 px-4"><button class="bg-red-500 text-white px-2 py-1 rounded text-xs" onclick="removeFromReviewTable('${item.transactionId}')">Remove</button></td>
+            </tr>
+        `).join('');
     }
+    window.removeFromReviewTable = (tid) => {
+        const idx = cart.findIndex(i => i.transactionId === tid);
+        if (idx > -1) { cart.splice(idx, 1); renderReview(); updateCartCounter(); }
+    };
 
-    // --- 8. EMAIL EXPORT ---
     function openEmailDraft() {
-        const emailTo = ""; 
         const uniqueWOs = [...new Set(cart.map(i => i.wo))];
-        const subject = `Material Transaction Request - WOs: ${uniqueWOs.join(', ')}`;
-        
-        let body = `MATERIAL TRANSACTION REPORT\n`;
-        body += `Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
-        body += `\nSUMMARY OF TRANSACTIONS (${cart.length} Total):\n`;
-        body += `========================================================================\n`;
-        
-        const sortedCart = [...cart].sort((a, b) => a.wo.localeCompare(b.wo) || a.type.localeCompare(b.type));
-
-        sortedCart.forEach(item => {
-            const typeLabel = item.type === 'Issue' ? 'ISSUE ' : 'CREDIT';
-            const woPad = item.wo.padEnd(10, ' ');
-            const typePad = typeLabel.padEnd(6, ' ');
-            const srcPad = item.source.padEnd(15, ' '); // Padding for alignment
-            
-            // UPDATED: Removed Description. Added CU (using item.id for letters) and ID (using item.cu for numbers).
-            body += `WO: ${woPad} | ${typePad} | Loc: ${srcPad} | ID: ${item.cu.padEnd(15, ' ')} | CU: ${item.id.padEnd(15, ' ')} | Qty: ${item.qty}\n`;
-        });
-        
-        body += `\n========================================================================\n`;
-        body += `End of Report.`;
-        
-        const mailtoLink = `mailto:${emailTo}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailtoLink;
-        
-        showCustomAlert("The email client should now open with your prepared material request list.", "Email Draft Prepared");
+        const subject = `Material Request - WOs: ${uniqueWOs.join(', ')}`;
+        let body = `MATERIAL REPORT ${APP_VERSION}\n\n`;
+        cart.forEach(i => body += `WO: ${i.wo} | ${i.type} | Loc: ${i.source} | ID: ${i.id} | Qty: ${i.qty}\n`);
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     }
-    
     window.openEmailDraft = openEmailDraft;
 
-</script>
+    function downloadCSV() {
+        const headers = ["Date", "WO Number", "CU", "ID", "Description", "Qty", "Type", "Location"];
+        const date = new Date().toLocaleDateString();
+        const rows = cart.map(i => [`"${date}"`, `"${i.wo}"`, `"${i.id}"`, `"${i.cu}"`, `"${i.desc}"`, i.qty, `"${i.type}"`, `"${i.source}"`]);
+        const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Material_Report_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+    }
+    window.downloadCSV = downloadCSV;
 
+    // --- ADMIN PIN GATE ---
+    function openAdminPinModal() {
+        if (adminUnlocked) {
+            goToOrderWO();
+            return;
+        }
+        document.getElementById('adminPinInput').value = '';
+        document.getElementById('admin-pin-error').classList.add('hidden');
+        const modal = document.getElementById('admin-pin-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.getElementById('adminPinInput').focus();
+    }
+    window.openAdminPinModal = openAdminPinModal;
+
+    function closeAdminPinModal() {
+        const modal = document.getElementById('admin-pin-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    window.closeAdminPinModal = closeAdminPinModal;
+
+    function checkAdminPin() {
+        const val = document.getElementById('adminPinInput').value;
+        if (val === ADMIN_PIN) {
+            adminUnlocked = true;
+            sessionStorage.setItem('adminUnlocked', 'true');
+            closeAdminPinModal();
+            goToOrderWO();
+        } else {
+            document.getElementById('admin-pin-error').classList.remove('hidden');
+            document.getElementById('adminPinInput').value = '';
+            document.getElementById('adminPinInput').focus();
+        }
+    }
+    window.checkAdminPin = checkAdminPin;
+
+    // --- POLES ORDER (ADMIN) ---
+    function goToOrderWO() {
+        document.getElementById('orderWoError').classList.add('hidden');
+        document.getElementById('orderLocationError').classList.add('hidden');
+        showView('view-order-wo');
+    }
+    window.goToOrderWO = goToOrderWO;
+
+    function submitOrderWO() {
+        const wo = document.getElementById('orderWoInput').value.trim().toUpperCase();
+        const location = document.getElementById('orderLocationInput').value;
+
+        if (!/^\d{8}-\d+$/.test(wo)) {
+            document.getElementById('orderWoError').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('orderWoError').classList.add('hidden');
+
+        if (!location) {
+            document.getElementById('orderLocationError').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('orderLocationError').classList.add('hidden');
+
+        orderWO = wo;
+        orderLocation = location;
+        registerWO(wo);
+        goToOrderSizes();
+    }
+    window.submitOrderWO = submitOrderWO;
+
+    function goToOrderSizes() {
+        document.getElementById('order-wo-display').innerText = orderWO;
+        setOrderMaterial(orderMaterial);
+        showView('view-order-sizes');
+    }
+    window.goToOrderSizes = goToOrderSizes;
+
+    function setOrderMaterial(m) {
+        orderMaterial = m;
+        const woodBtn = document.getElementById('orderBtnWood');
+        const concreteBtn = document.getElementById('orderBtnConcrete');
+        woodBtn.className = 'py-4 rounded-lg font-bold text-lg transition ' + (m === 'wood' ? 'bg-primary-blue text-white' : 'bg-white text-primary-blue border-2 border-primary-blue');
+        concreteBtn.className = 'py-4 rounded-lg font-bold text-lg transition ' + (m === 'concrete' ? 'bg-gray-700 text-white' : 'bg-white text-gray-700 border-2 border-gray-400');
+        renderOrderSizeGrid();
+    }
+    window.setOrderMaterial = setOrderMaterial;
+
+    function renderOrderSizeGrid() {
+        const grid = document.getElementById('order-size-grid');
+        grid.innerHTML = POLE_SIZES.map(sz => `
+            <button class="py-8 text-2xl font-extrabold rounded-lg bg-white text-primary-blue border-2 border-primary-blue hover:bg-blue-50 transition" onclick="pickOrderSize('${sz}')">${sz}</button>
+        `).join('');
+    }
+
+    function pickOrderSize(sz) {
+        orderSize = sz;
+        orderClass = null;
+        const options = (POLE_CLASSES[orderMaterial] && POLE_CLASSES[orderMaterial][sz]) ? POLE_CLASSES[orderMaterial][sz] : [];
+        const materialLabel = orderMaterial === 'wood' ? 'Wood' : 'Concrete';
+        const grid = document.getElementById('order-class-grid');
+        if (options.length === 0) {
+            grid.innerHTML = `<p class="col-span-full text-gray-500">No classes defined yet for this size.</p>`;
+        } else {
+            grid.innerHTML = options.map(c => {
+                const alreadyQty = orderCart
+                    .filter(i => i.wo === orderWO && i.material === materialLabel && i.size === sz && i.cls === c)
+                    .reduce((sum, i) => sum + i.qty, 0);
+                const badge = alreadyQty > 0
+                    ? `<span class="block text-xs font-semibold text-success-green mt-1">Already added: ${alreadyQty}</span>`
+                    : '';
+                return `
+                <button class="py-6 text-xl font-bold rounded-lg bg-white text-primary-blue border-2 border-primary-blue hover:bg-blue-50 transition" onclick="pickOrderClass('${c}')">
+                    Class ${escapeHtml(c)}${badge}
+                </button>`;
+            }).join('');
+        }
+        document.getElementById('order-classes-breadcrumb').innerText = `${materialLabel} / ${sz} ft`;
+        showView('view-order-classes');
+    }
+    window.pickOrderSize = pickOrderSize;
+
+    function pickOrderClass(c) {
+        orderClass = c;
+        document.getElementById('orderQtyInput').value = 1;
+        document.getElementById('order-qty-breadcrumb').innerText = `${orderMaterial === 'wood' ? 'Wood' : 'Concrete'} / ${orderSize} ft / Class ${c}`;
+        showView('view-order-qty');
+    }
+    window.pickOrderClass = pickOrderClass;
+
+    function goToOrderClasses() {
+        // Clears the in-progress class/qty selection and re-renders the class grid for the current size
+        pickOrderSize(orderSize);
+    }
+    window.goToOrderClasses = goToOrderClasses;
+
+    function addToOrderCart() {
+        const qtyRaw = document.getElementById('orderQtyInput').value;
+        const qty = parseInt(qtyRaw, 10);
+        if (isNaN(qty) || qty <= 0 || String(qty) !== qtyRaw.trim()) {
+            showCustomAlert("Please enter a valid whole number quantity.", "Quantity Invalid");
+            return;
+        }
+        orderCart.push({
+            transactionId: crypto.randomUUID(),
+            wo: orderWO,
+            location: orderLocation,
+            material: orderMaterial === 'wood' ? 'Wood' : 'Concrete',
+            size: orderSize,
+            cls: orderClass,
+            qty
+        });
+        updateOrderCartCounter();
+        goToOrderSizes();
+    }
+    window.addToOrderCart = addToOrderCart;
+
+    function updateOrderCartCounter() {
+        const count = orderCart.length;
+        ['order-cart-counter-1', 'order-cart-counter-2', 'order-cart-counter-3'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = count;
+        });
+    }
+
+    function goToOrderReview() {
+        if (orderCart.length === 0) return showCustomAlert("Order list is empty.");
+        showView('view-order-review');
+        renderOrderReview();
+    }
+    window.goToOrderReview = goToOrderReview;
+
+    function renderOrderReview() {
+        document.getElementById('orderTotalItemsCount').innerText = orderCart.length;
+        document.getElementById('orderReviewTableBody').innerHTML = orderCart.map(item => `
+            <tr class="border-b">
+                <td class="py-3 px-4 font-mono">${escapeHtml(item.wo)}</td>
+                <td class="py-3 px-4 text-sm">${escapeHtml(item.location)}</td>
+                <td class="py-3 px-4">${escapeHtml(item.material)}</td>
+                <td class="py-3 px-4 font-bold">${escapeHtml(item.size)} ft</td>
+                <td class="py-3 px-4">Class ${escapeHtml(item.cls)}</td>
+                <td class="py-3 px-4 font-extrabold">${item.qty}</td>
+                <td class="py-3 px-4"><button class="bg-red-500 text-white px-2 py-1 rounded text-xs" onclick="removeFromOrderCart('${item.transactionId}')">Remove</button></td>
+            </tr>
+        `).join('');
+    }
+
+    window.removeFromOrderCart = (tid) => {
+        const idx = orderCart.findIndex(i => i.transactionId === tid);
+        if (idx > -1) { orderCart.splice(idx, 1); renderOrderReview(); updateOrderCartCounter(); }
+    };
+
+    function openOrderEmailDraft() {
+        const uniqueWOs = [...new Set(orderCart.map(i => i.wo))];
+        const subject = `Poles Order - WOs: ${uniqueWOs.join(', ')}`;
+        let body = `POLES ORDER ${APP_VERSION}\n\n`;
+        orderCart.forEach(i => body += `WO: ${i.wo} | Loc: ${i.location} | ${i.material} | Size: ${i.size} ft | Class: ${i.cls} | Qty: ${i.qty}\n`);
+
+        // Combine To/CC recipients across every distinct location present in this order
+        const uniqueLocations = [...new Set(orderCart.map(i => i.location).filter(Boolean))];
+        const toSet = new Set();
+        const ccSet = new Set();
+        uniqueLocations.forEach(loc => {
+            const entry = LOCATION_EMAILS[loc];
+            if (!entry) return;
+            entry.to.split(',').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
+            entry.cc.split(',').map(e => e.trim()).filter(Boolean).forEach(e => ccSet.add(e));
+        });
+        const to = [...toSet].map(e => encodeURIComponent(e)).join(',');
+        const cc = [...ccSet].map(e => encodeURIComponent(e)).join(',');
+
+        let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        if (cc) mailtoUrl += `&cc=${cc}`;
+        window.location.href = mailtoUrl;
+    }
+    window.openOrderEmailDraft = openOrderEmailDraft;
+
+    function downloadOrderCSV() {
+        const headers = ["Date", "WO Number", "Location", "Material", "Size", "Class", "Qty"];
+        const date = new Date().toLocaleDateString();
+        const rows = orderCart.map(i => [`"${date}"`, `"${i.wo}"`, `"${i.location}"`, `"${i.material}"`, `"${i.size}"`, `"${i.cls}"`, i.qty]);
+        const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Poles_Order_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+    }
+    window.downloadOrderCSV = downloadOrderCSV;
+
+</script>
 </body>
 </html>
