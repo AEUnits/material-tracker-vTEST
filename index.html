@@ -272,6 +272,7 @@
                 <!-- LOCATIONS injected here at load -->
             </select>
             <p id="orderLocationError" class="text-danger-red font-semibold text-sm mt-2 hidden">Please select where these should be delivered</p>
+            <p id="orderLocationLockNote" class="text-xs text-gray-500 mt-1 hidden"></p>
 
             <button class="w-full mt-4 py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md" onclick="submitOrderWO()">
                 Continue
@@ -438,7 +439,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.15"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.16"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -966,9 +967,30 @@
     window.checkAdminPin = checkAdminPin;
 
     // --- POLES ORDER (ADMIN) ---
+    function applyOrderLocationLock() {
+        const select = document.getElementById('orderLocationInput');
+        const lockNote = document.getElementById('orderLocationLockNote');
+        if (orderCart.length > 0) {
+            const lockedLoc = orderCart[0].location;
+            Array.from(select.options).forEach(opt => {
+                opt.disabled = (opt.value !== '' && opt.value !== lockedLoc);
+            });
+            select.value = lockedLoc;
+            select.disabled = true;
+            lockNote.textContent = `Locked to ${lockedLoc} for this order - this batch already has poles going there.`;
+            lockNote.classList.remove('hidden');
+        } else {
+            Array.from(select.options).forEach(opt => { opt.disabled = false; });
+            select.disabled = false;
+            select.value = '';
+            lockNote.classList.add('hidden');
+        }
+    }
+
     function goToOrderWO() {
         document.getElementById('orderWoError').classList.add('hidden');
         document.getElementById('orderLocationError').classList.add('hidden');
+        applyOrderLocationLock();
         showView('view-order-wo');
     }
     window.goToOrderWO = goToOrderWO;
@@ -1143,8 +1165,29 @@
 
         const deliveryLocationText = formatLocationList(uniqueLocations);
         let body = `Hello,\n\n\nCould we get the following poles delivered to ${deliveryLocationText}.\nThanks!\n\n\n`;
-        body += `POLES ORDER ${APP_VERSION}\n\n\n`;
-        orderCart.forEach(i => body += `WO: ${i.wo} | Deliver To: ${i.location} | ${i.material} | Size: ${i.size} ft | Class: ${i.cls} | Qty: ${i.qty}\n`);
+        body += `POLES ORDER ${APP_VERSION}\n\n`;
+        body += `Deliver To: ${deliveryLocationText}\n\n`;
+
+        // Group items by WO, in order of first appearance
+        const groups = [];
+        const groupIndexByWO = {};
+        orderCart.forEach(item => {
+            if (!(item.wo in groupIndexByWO)) {
+                groupIndexByWO[item.wo] = groups.length;
+                groups.push({ wo: item.wo, items: [] });
+            }
+            groups[groupIndexByWO[item.wo]].items.push(item);
+        });
+
+        groups.forEach((group, gIdx) => {
+            const woPrefix = `WO: ${group.wo} | `;
+            const indent = ' '.repeat(woPrefix.length);
+            group.items.forEach((item, iIdx) => {
+                const line = `${item.material} | Size: ${item.size} ft  /  ${item.cls} | Qty: ${item.qty}`;
+                body += (iIdx === 0 ? woPrefix : indent) + line + '\n';
+            });
+            if (gIdx < groups.length - 1) body += '\n\n'; // bigger gap between different WOs
+        });
 
         let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         if (cc) mailtoUrl += `&cc=${cc}`;
