@@ -263,8 +263,8 @@
             <input type="text" id="orderWoInput" placeholder="12345678-1" autocomplete="off"
                    class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition"
                    onkeydown="if(event.key === 'Enter') submitOrderWO()">
-            <p class="text-xs text-gray-500 mt-1">8 digits, a dash, then the task number (e.g. 12345678-1)</p>
-            <p id="orderWoError" class="text-danger-red font-semibold text-sm mt-2 hidden">Enter a WO in the format 12345678-1</p>
+            <p class="text-xs text-gray-500 mt-1">8 digits, optionally followed by a dash and task number (e.g. 12345678 or 12345678-1)</p>
+            <p id="orderWoError" class="text-danger-red font-semibold text-sm mt-2 hidden">Enter a WO with 8 digits (e.g. 12345678 or 12345678-1)</p>
 
             <label class="block text-sm font-semibold text-gray-600 mb-1 mt-4">Deliver To</label>
             <select id="orderLocationInput" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
@@ -439,7 +439,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.16"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.17"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -999,7 +999,7 @@
         const wo = document.getElementById('orderWoInput').value.trim().toUpperCase();
         const location = document.getElementById('orderLocationInput').value;
 
-        if (!/^\d{8}-\d+$/.test(wo)) {
+        if (!/^\d{8}(-\d+)?$/.test(wo)) {
             document.getElementById('orderWoError').classList.remove('hidden');
             return;
         }
@@ -1180,11 +1180,9 @@
         });
 
         groups.forEach((group, gIdx) => {
-            const woPrefix = `WO: ${group.wo} | `;
-            const indent = ' '.repeat(woPrefix.length);
-            group.items.forEach((item, iIdx) => {
-                const line = `${item.material} | Size: ${item.size} ft  /  ${item.cls} | Qty: ${item.qty}`;
-                body += (iIdx === 0 ? woPrefix : indent) + line + '\n';
+            body += `WO: ${group.wo}\n`;
+            group.items.forEach(item => {
+                body += `  \u2022 ${item.material} | Size: ${item.size}  /  ${item.cls} | Qty: ${item.qty}\n`;
             });
             if (gIdx < groups.length - 1) body += '\n\n'; // bigger gap between different WOs
         });
