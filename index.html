@@ -445,7 +445,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.18"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.20"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -1143,9 +1143,22 @@
         return { list, grandTotal };
     }
 
+    function groupCartByWO(items) {
+        const groups = [];
+        const groupIndexByWO = {};
+        items.forEach(item => {
+            if (!(item.wo in groupIndexByWO)) {
+                groupIndexByWO[item.wo] = groups.length;
+                groups.push([]);
+            }
+            groups[groupIndexByWO[item.wo]].push(item);
+        });
+        return groups.flat();
+    }
+
     function renderOrderReview() {
         document.getElementById('orderTotalItemsCount').innerText = orderCart.length;
-        document.getElementById('orderReviewTableBody').innerHTML = orderCart.map(item => `
+        document.getElementById('orderReviewTableBody').innerHTML = groupCartByWO(orderCart).map(item => `
             <tr class="border-b">
                 <td class="py-3 px-4 font-mono">${escapeHtml(item.wo)}</td>
                 <td class="py-3 px-4 text-sm">${escapeHtml(item.location)}</td>
@@ -1159,7 +1172,7 @@
 
         const { list, grandTotal } = getPoleTotals();
         document.getElementById('orderTotalsBreakdown').innerHTML = list.length > 0
-            ? list.map(t => `<div class="flex justify-between max-w-xs"><span>${escapeHtml(t.material)} ${escapeHtml(t.size)} / ${escapeHtml(t.cls)}</span><strong>${t.qty}</strong></div>`).join('')
+            ? list.map(t => `<div class="flex justify-between max-w-xs"><span>${escapeHtml(t.material)} ${escapeHtml(t.size)} / ${escapeHtml(t.cls)}</span><strong>Qty: ${t.qty}</strong></div>`).join('')
             : '<p class="text-gray-400">No poles selected.</p>';
         document.getElementById('orderGrandTotal').innerText = grandTotal;
     }
@@ -1219,7 +1232,7 @@
 
         const { list: totalsList, grandTotal } = getPoleTotals();
         body += `\n\n\nTOTAL POLE COUNT\n\n`;
-        totalsList.forEach(t => body += `${t.material} ${t.size}  /  ${t.cls}: ${t.qty}\n`);
+        totalsList.forEach(t => body += `${t.material} ${t.size}  /  ${t.cls}   Qty: ${t.qty}\n`);
         body += `\nTotal: ${grandTotal}\n`;
 
         let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
