@@ -391,6 +391,12 @@
             </table>
         </div>
 
+        <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 class="font-bold text-gray-700 mb-2">Total Pole Count</h3>
+            <div id="orderTotalsBreakdown" class="text-sm text-gray-700 space-y-1"></div>
+            <p class="mt-3 pt-3 border-t border-gray-300 font-extrabold text-primary-blue">Total: <span id="orderGrandTotal">0</span></p>
+        </div>
+
         <div class="mt-8 pt-6 border-t border-gray-300 flex flex-col sm:flex-row gap-4">
             <button class="flex-1 px-6 py-4 text-lg bg-gray-600 text-white font-extrabold rounded-lg hover:bg-gray-700 transition duration-150 shadow-xl" onclick="downloadOrderCSV()">
                 Download CSV
@@ -439,7 +445,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.17"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.18"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -1119,6 +1125,24 @@
     }
     window.goToOrderReview = goToOrderReview;
 
+    function getPoleTotals() {
+        const totals = {};
+        orderCart.forEach(item => {
+            const key = `${item.material}|${item.size}|${item.cls}`;
+            if (!totals[key]) totals[key] = { material: item.material, size: item.size, cls: item.cls, qty: 0 };
+            totals[key].qty += item.qty;
+        });
+        const list = Object.values(totals);
+        list.sort((a, b) => {
+            if (a.material !== b.material) return a.material === 'Wood' ? -1 : 1;
+            const sizeDiff = parseInt(a.size, 10) - parseInt(b.size, 10);
+            if (sizeDiff !== 0) return sizeDiff;
+            return a.cls.localeCompare(b.cls);
+        });
+        const grandTotal = list.reduce((sum, t) => sum + t.qty, 0);
+        return { list, grandTotal };
+    }
+
     function renderOrderReview() {
         document.getElementById('orderTotalItemsCount').innerText = orderCart.length;
         document.getElementById('orderReviewTableBody').innerHTML = orderCart.map(item => `
@@ -1132,6 +1156,12 @@
                 <td class="py-3 px-4"><button class="bg-red-500 text-white px-2 py-1 rounded text-xs" onclick="removeFromOrderCart('${item.transactionId}')">Remove</button></td>
             </tr>
         `).join('');
+
+        const { list, grandTotal } = getPoleTotals();
+        document.getElementById('orderTotalsBreakdown').innerHTML = list.length > 0
+            ? list.map(t => `<div class="flex justify-between max-w-xs"><span>${escapeHtml(t.material)} ${escapeHtml(t.size)} / ${escapeHtml(t.cls)}</span><strong>${t.qty}</strong></div>`).join('')
+            : '<p class="text-gray-400">No poles selected.</p>';
+        document.getElementById('orderGrandTotal').innerText = grandTotal;
     }
 
     window.removeFromOrderCart = (tid) => {
@@ -1186,6 +1216,11 @@
             });
             if (gIdx < groups.length - 1) body += '\n\n'; // bigger gap between different WOs
         });
+
+        const { list: totalsList, grandTotal } = getPoleTotals();
+        body += `\n\n\nTOTAL POLE COUNT\n\n`;
+        totalsList.forEach(t => body += `${t.material} ${t.size}  /  ${t.cls}: ${t.qty}\n`);
+        body += `\nTotal: ${grandTotal}\n`;
 
         let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         if (cc) mailtoUrl += `&cc=${cc}`;
