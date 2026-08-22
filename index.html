@@ -254,9 +254,17 @@
     <div id="view-order-wo" class="hidden">
         <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
             <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
-            <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToToc()">
-                &larr; Categories
-            </button>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md flex items-center gap-1.5" onclick="goToOrderReview()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    (<span id="order-cart-counter-0">0</span>)
+                </button>
+                <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToToc()">
+                    Home
+                </button>
+            </div>
         </header>
         <div class="max-w-md">
             <label class="block text-sm font-semibold text-gray-600 mb-1">WO #</label>
@@ -364,8 +372,14 @@
         <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
             <h1 class="text-2xl font-extrabold text-gray-800">Poles Order - Review & Send</h1>
             <div class="flex items-center gap-2">
+                <button class="px-4 py-2 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500 transition duration-150 shadow-md" onclick="goToToc()">
+                    Home
+                </button>
+                <button class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md" onclick="goToOrderWO()">
+                    Add WO
+                </button>
                 <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToOrderSizes()">
-                    &larr; Back to Order
+                    &larr; Back
                 </button>
             </div>
         </header>
@@ -445,7 +459,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.22"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.25"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -1112,7 +1126,7 @@
 
     function updateOrderCartCounter() {
         const count = orderCart.length;
-        ['order-cart-counter-1', 'order-cart-counter-2', 'order-cart-counter-3'].forEach(id => {
+        ['order-cart-counter-0', 'order-cart-counter-1', 'order-cart-counter-2', 'order-cart-counter-3'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerText = count;
         });
