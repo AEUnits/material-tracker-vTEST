@@ -68,7 +68,7 @@
 <!-- Admin PIN modal -->
 <div id="admin-pin-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 z-[1000] hidden justify-center items-center">
     <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-11/12 text-center">
-        <h4 class="text-xl font-bold text-primary-blue mb-3">Admin Access</h4>
+        <h4 class="text-xl font-bold text-primary-blue mb-3">Management Access</h4>
         <p class="mb-4 text-gray-700">Enter the admin PIN to continue.</p>
         <input type="password" id="adminPinInput" placeholder="****" autocomplete="off"
                class="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-widest mb-2 focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition"
@@ -436,9 +436,9 @@
 
 <div id="admin-trigger" class="fixed bottom-4 left-4 z-40 hidden">
     <button onclick="openAdminPinModal()"
-            title="Admin"
+            title="Management"
             class="p-2 bg-white text-gray-300 border border-gray-100 rounded-full shadow-sm hover:text-gray-500 hover:bg-gray-50 hover:border-gray-200 transition-all duration-200 flex items-center gap-2 group">
-        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Admin</span>
+        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Management</span>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -459,7 +459,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.25"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.28"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -486,6 +486,16 @@
         "Ocala Jingoli":         { to: "tdibiasio@jingolipower.com", cc: DEFAULT_CC },
         "Jasper Jingoli":        { to: "robert.claxton@duke-energy.com", cc: DEFAULT_CC }
     };
+
+    // CC recipients for the Material Tracker sign-in/out email draft
+    const MATERIAL_EMAIL_CC = [
+        '"DEF Material" <defmaterial@pike.com>',
+        '"Arnaldo Escobar" <AEscobar@pike.com>',
+        '"Josh Maynard" <JMMaynard@pike.com>',
+        '"Robert Baughman" <RBaughman@pike.com>',
+        '"James C. Thompson (GF)" <JCThompson@pike.com>',
+        '"Ronald Edwards" <REdwards@pike.com>'
+    ];
 
     // --- POLES ORDER (ADMIN) STATE & DATA ---
     let orderCart = [];
@@ -932,7 +942,22 @@
         const subject = `Material Request - WOs: ${uniqueWOs.join(', ')}`;
         let body = `MATERIAL REPORT ${APP_VERSION}\n\n`;
         cart.forEach(i => body += `WO: ${i.wo} | ${i.type} | Loc: ${i.source} | ID: ${i.id} | Qty: ${i.qty}\n`);
-        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+        // If any location in this order is not a Jingoli yard (i.e. a Pike yard),
+        // DEF Material goes in To instead of CC for that email.
+        const defMaterialAddr = MATERIAL_EMAIL_CC[0]; // '"DEF Material" <defmaterial@pike.com>'
+        const uniqueSources = [...new Set(cart.map(i => i.source).filter(Boolean))];
+        const hasNonJingoli = uniqueSources.some(loc => !loc.includes('Jingoli'));
+
+        const toList = hasNonJingoli ? [defMaterialAddr] : [];
+        const ccList = hasNonJingoli ? MATERIAL_EMAIL_CC.filter(e => e !== defMaterialAddr) : MATERIAL_EMAIL_CC;
+
+        const to = toList.map(e => encodeURIComponent(e)).join(',');
+        const cc = ccList.map(e => encodeURIComponent(e)).join(',');
+
+        let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        if (cc) mailtoUrl += `&cc=${cc}`;
+        window.location.href = mailtoUrl;
     }
     window.openEmailDraft = openEmailDraft;
 
