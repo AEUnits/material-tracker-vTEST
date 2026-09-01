@@ -453,7 +453,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v8.1.34"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v8.1.35"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -469,7 +469,7 @@
         "Frostproof Pike Yard":  { to: "PD-HIGHLANDS@duke-energy.com", cc: DEFAULT_CC },
         "Dundee Pike Yard":      { to: "PD-LAKEWALES@duke-energy.com", cc: DEFAULT_CC },
         "Sebring Pike Yard":     { to: "PD-HIGHLANDS@duke-energy.com", cc: DEFAULT_CC },
-        "Haines City Jingoli":   { to: "jsilva@jingolipower.com", cc: DEFAULT_CC },
+        "Haines City Jingoli":   { to: '"Silva, Jose" <jsilva@jingolipower.com>;"Oliveros, Leonardo" <Leonardo.Oliveros@duke-energy.com>;"preyes" <preyes@jingolipower.com>', cc: DEFAULT_CC },
         "Winter Garden Jingoli": { to: "Jose.Gonzales2@duke-energy.com", cc: DEFAULT_CC },
         "Orlando Jingoli":       { to: "preyes@jingolipower.com", cc: DEFAULT_CC },
         "Apopka Jingoli":        { to: "stephen.lagasse@jingolipower.com", cc: DEFAULT_CC },
@@ -971,7 +971,7 @@
             if (loc.includes('Jingoli')) {
                 const entry = LOCATION_EMAILS[loc];
                 if (entry && entry.to) {
-                    entry.to.split(',').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
+                    entry.to.split(';').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
                 }
             }
         });
@@ -1245,8 +1245,8 @@
         uniqueLocations.forEach(loc => {
             const entry = LOCATION_EMAILS[loc];
             if (!entry) return;
-            entry.to.split(',').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
-            entry.cc.split(',').map(e => e.trim()).filter(Boolean).forEach(e => ccSet.add(e));
+            entry.to.split(';').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
+            entry.cc.split(';').map(e => e.trim()).filter(Boolean).forEach(e => ccSet.add(e));
         });
         const to = [...toSet].map(e => encodeURIComponent(e)).join(',');
         const cc = [...ccSet].map(e => encodeURIComponent(e)).join(',');
