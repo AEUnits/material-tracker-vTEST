@@ -3,36 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Material Sign In/Out Tracker</title>
-    <!-- Load Tailwind CSS -->
+    <title>WO Autocomplete Test - Custom Dropdown</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Load PapaParse for Robust CSV Handling -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        /* Custom Styles for Inter Font and Input Fixes */
         body { font-family: 'Inter', sans-serif; }
-
-        /* Firefox number input fix */
-        input[type="number"] { -moz-appearance: textfield; } 
-        /* Chrome, Safari number input fix */
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-
-        /* Style for sticky table header */
-        #materialTable thead th, #reviewTable thead th {
-            position: sticky;
-            top: 0;
-            background-color: #f3f4f6; /* Tailwind gray-100 */
-            z-index: 10;
-        }
-
-        /* Responsive Table Container Height */
-        .table-container {
-            max-height: 70vh; /* Use viewport height for better responsiveness */
-            overflow-y: auto;
-            border: 1px solid #e5e7eb; /* Tailwind gray-200 */
-            border-radius: 0.5rem;
-        }
     </style>
     <script>
         tailwind.config = {
@@ -41,531 +15,73 @@
                     colors: {
                         'primary-blue': '#0056b3',
                         'success-green': '#28a745',
-                        'danger-red': '#dc3545',
-                        'warning-yellow': '#ffc107',
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-gray-100 p-4 sm:p-6 pb-20"> 
+<body class="bg-gray-100 p-6">
 
-<!-- Version badge - fixed top-left, shown on every page -->
-<div id="version-badge" class="fixed top-1 left-1.5 z-[2000] text-[10px] font-semibold text-gray-400 select-none"></div>
+<div class="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-2xl">
+    <h1 class="text-xl font-extrabold text-gray-800 mb-1">WO Autocomplete - Custom Dropdown Test</h1>
+    <p class="text-sm text-gray-500 mb-6">
+        This does NOT use the browser's native &lt;datalist&gt; / list="" attribute at all - no native
+        suggestion popup can appear, so there's nothing to steal focus away from a Bluetooth keyboard.
+        Everything below (the WO field, the dropdown, and the highlighting) is plain HTML/JS we fully control.
+    </p>
 
-<!-- Custom Modal Overlay -->
-<div id="custom-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 z-[1000] hidden justify-center items-center">
-    <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-11/12 text-center">
-        <h4 id="modal-title" class="text-xl font-bold text-primary-blue mb-3"></h4>
-        <p id="modal-message" class="mb-5 text-gray-700"></p>
-        <div id="modal-buttons" class="flex justify-center gap-3">
-            <!-- Buttons injected by JS -->
-        </div>
+    <div class="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-gray-700">
+        <strong>Try this:</strong> Type <code class="bg-white px-1 rounded">20005577</code> below, hit Enter or tap
+        elsewhere to save it to history, clear the field, then type <code class="bg-white px-1 rounded">20005576</code>
+        using a real/Bluetooth keyboard. With the old &lt;datalist&gt; approach, typing after the 6th matching digit
+        could kick you out of the field on some phones. This version shouldn't do that, since the browser is never
+        involved in the suggestion popup.
     </div>
-</div>
 
-<!-- Admin PIN modal -->
-<div id="admin-pin-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 z-[1000] hidden justify-center items-center">
-    <div class="bg-white p-6 rounded-lg shadow-2xl max-w-sm w-11/12 text-center">
-        <h4 class="text-xl font-bold text-primary-blue mb-3">Management Access</h4>
-        <p class="mb-4 text-gray-700">Enter the admin PIN to continue.</p>
-        <input type="password" id="adminPinInput" placeholder="****" autocomplete="off"
-               class="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-widest mb-2 focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition"
-               onkeydown="if(event.key === 'Enter') checkAdminPin()">
-        <p id="admin-pin-error" class="text-danger-red font-bold mb-3 hidden">Incorrect PIN</p>
-        <div class="flex justify-center gap-3">
-            <button onclick="closeAdminPinModal()" class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150">Cancel</button>
-            <button onclick="checkAdminPin()" class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150">Continue</button>
-        </div>
+    <label class="block text-sm font-semibold text-gray-600 mb-1">WO #</label>
+    <div class="relative">
+        <input type="text" id="woInput" placeholder="WO#" autocomplete="off"
+               class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
+        <div id="woSuggestions" class="hidden absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"></div>
     </div>
-</div>
 
-<!-- Datalist for storing WO history -->
-<datalist id="wo-history-list"></datalist>
-
-<!-- VIEW 0: LOGIN SCREEN -->
-<div id="view-login" class="fixed inset-0 bg-gray-100 flex flex-col justify-center items-center z-50">
-    <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full text-center">
-        <h1 class="text-2xl font-extrabold text-gray-800 mb-2">Restricted Access</h1>
-        <p class="text-gray-500 mb-6">Please enter the passcode to access the Material Tracker.</p>
-        <input type="password" id="passcodeInput" 
-               class="w-full p-3 border-2 border-gray-300 rounded-lg text-center text-2xl tracking-widest mb-4 focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition" 
-               placeholder="****"
-               onkeydown="if(event.key === 'Enter') checkPasscode()">
-        <button onclick="checkPasscode()" 
-                class="w-full py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md">
-            Enter Tracker
+    <div class="mt-6 flex gap-2">
+        <button onclick="saveCurrentWO()" class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition text-sm">
+            Save WO to History
         </button>
-        <p id="login-error" class="text-danger-red font-bold mt-3 hidden">Incorrect Passcode</p>
+        <button onclick="clearHistory()" class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition text-sm">
+            Clear History
+        </button>
+    </div>
+
+    <div class="mt-6 pt-4 border-t border-gray-200">
+        <h2 class="text-sm font-bold text-gray-600 uppercase tracking-wide mb-2">Saved WO History</h2>
+        <div id="historyList" class="flex flex-wrap gap-2"></div>
     </div>
 </div>
 
-<div class="container max-w-6xl mx-auto bg-white p-4 sm:p-6 rounded-xl shadow-2xl">
-    
-    <!-- VIEW 1: TABLE OF CONTENTS -->
-    <div id="view-toc" class="hidden">
-        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-4 mb-4 border-b-2 border-gray-200">
-            <h1 class="text-2xl font-extrabold text-gray-800">Material Categories</h1>
-            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-3 sm:mt-0">
-                <div class="flex items-center gap-2">
-                    <span id="db-status-badge" class="px-3 py-1.5 rounded-md text-sm font-semibold shadow-sm"></span>
-                    <button onclick="syncFromEmbeddedSheet()" title="Force Sync from Google Sheets" 
-                            class="p-2 bg-white text-gray-600 border border-gray-300 rounded-md hover:bg-gray-100 hover:text-primary-blue transition shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                    </button>
-                </div>
-                <button class="w-full sm:w-auto px-4 py-2 bg-success-green text-white font-bold rounded-lg hover:bg-green-700 transition duration-150 shadow-md" onclick="goToReview()">
-                    Review List (<span id="cart-counter">0</span>) &rarr;
-                </button>
-            </div>
-        </header>
-        
-        <!-- Global Search -->
-        <div class="mb-8 relative">
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <input type="text" id="globalSearch" 
-                       class="block w-full pl-10 pr-24 p-4 border-2 border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:border-primary-blue focus:ring-2 focus:ring-blue-300 sm:text-lg transition shadow-md" 
-                       placeholder="Quick search all materials (CU, ID, Description)..."
-                       onkeydown="if(event.key === 'Enter') performGlobalSearch(this.value)">
-                <div class="absolute inset-y-0 right-0 flex py-2 pr-2">
-                    <button onclick="performGlobalSearch(document.getElementById('globalSearch').value)" 
-                            class="px-6 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150">
-                        Search
-                    </button>
-                </div>
-            </div>
-        </div>
+<script>
+    // Seed with a couple of example WOs so you can immediately test the overlap scenario
+    let woHistory = ['20005577', '12345678-1'];
+    let activeSuggestionIndex = -1;
+    let currentMatches = [];
 
-        <div id="toc-buttons" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            <div class="p-6 text-center text-gray-500 font-semibold col-span-full">Loading categories...</div>
-        </div>
-    </div>
+    const input = document.getElementById('woInput');
+    const suggestionsBox = document.getElementById('woSuggestions');
 
-    <!-- VIEW 2: SELECTION PAGE -->
-    <div id="view-selection" class="hidden">
-        <header class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-2 border-b border-gray-200">
-            <div class="flex items-center gap-3 overflow-hidden">
-                <h1 class="text-xl sm:text-2xl font-extrabold text-gray-800 whitespace-nowrap">Material Tracker</h1>
-                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm whitespace-nowrap">
-                    <span class="text-xs font-semibold text-gray-500 mr-2 uppercase tracking-wider hidden md:inline">Category:</span>
-                    <strong id="current-filter-category" class="text-primary-blue text-sm sm:text-base">All Materials</strong>
-                </div>
-            </div>
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150 whitespace-nowrap" onclick="goToToc()">
-                    &larr; Categories
-                </button>
-                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md whitespace-nowrap" onclick="goToReview()">
-                    Review (<span id="selection-cart-counter">0</span>) &rarr;
-                </button>
-            </div>
-        </header>
-
-        <div class="mb-3 flex gap-2">
-            <div class="relative flex-grow">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-                    </svg>
-                </div>
-                <input type="text" id="searchInput" class="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-300 focus:border-primary-blue transition shadow-sm" 
-                       placeholder="Search materials by CU, ID, or Description..." 
-                       onkeydown="if(event.key === 'Enter') filterMaterials()">
-            </div>
-            <button onclick="filterMaterials()" class="px-4 py-2 bg-primary-blue text-white font-bold rounded-md hover:bg-blue-700 transition shadow-sm text-sm">
-                Search
-            </button>
-        </div>
-
-        <div id="pagination-top" class="mb-2 bg-gray-50 p-2 rounded-md border border-gray-200 hidden"></div>
-        
-        <div class="table-container">
-            <table id="materialTable" class="w-full text-left">
-                <thead>
-                    <tr class="text-sm uppercase text-gray-600 border-b border-gray-300">
-                        <th class="py-3 px-4">ID</th>
-                        <th class="py-3 px-4">CU / Description</th>
-                        <th class="py-2 px-4">
-                            <div class="hidden lg:flex items-center gap-2 normal-case text-xs font-semibold tracking-normal">
-                                <span class="w-32 lg:w-36">WO</span>
-                                <span class="w-24">Type</span>
-                                <span class="w-40">Loc</span>
-                                <span class="w-16 text-center">Qty</span>
-                            </div>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody id="materialTableBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- VIEW 3: REVIEW PAGE -->
-    <div id="view-review" class="hidden">
-        <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
-            <h1 class="text-2xl font-extrabold text-gray-800">Review & Send</h1>
-            <div class="flex items-center gap-2">
-                <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goBack()">
-                    &larr; Back to Selection
-                </button>
-            </div>
-        </header>
-
-        <div class="bg-gray-200 p-4 rounded-lg mb-6 border border-gray-300">
-            <p class="font-semibold text-gray-800">Total Transactions Selected: <span id="totalItemsCount" class="text-primary-blue font-extrabold">0</span></p>
-        </div>
-
-        <div class="table-container">
-            <table id="reviewTable" class="w-full text-left">
-                <thead>
-                    <tr class="text-sm uppercase text-gray-600 border-b border-gray-300">
-                        <th class="py-3 px-4">WO #</th>
-                        <th class="py-3 px-4">Type</th>
-                        <th class="py-3 px-4">Location</th>
-                        <th class="py-3 px-4">ID</th>
-                        <th class="py-3 px-4">Description</th>
-                        <th class="py-3 px-4">Qty</th>
-                        <th class="py-3 px-4">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="reviewTableBody"></tbody>
-            </table>
-        </div>
-
-        <div class="mt-8 pt-6 border-t border-gray-300">
-            <button class="w-full px-6 py-4 text-lg bg-success-green text-white font-extrabold rounded-lg hover:bg-green-700 transition duration-150 shadow-xl" onclick="openEmailDraft()">
-                Send Email
-            </button>
-        </div>
-    </div>
-
-    <!-- VIEW 4: ADMIN - POLES ORDER - WO ENTRY -->
-    <div id="view-order-wo" class="hidden">
-        <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
-            <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
-            <div class="flex items-center gap-2">
-                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md flex items-center gap-1.5" onclick="goToOrderReview()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    (<span id="order-cart-counter-0">0</span>)
-                </button>
-                <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToToc()">
-                    Home
-                </button>
-            </div>
-        </header>
-        <div class="max-w-md">
-            <label class="block text-sm font-semibold text-gray-600 mb-1">WO #</label>
-            <input type="text" id="orderWoInput" placeholder="12345678-1" autocomplete="off"
-                   class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition"
-                   onkeydown="if(event.key === 'Enter') submitOrderWO()">
-            <p class="text-xs text-gray-500 mt-1">8 digits, optionally followed by a dash and task number (e.g. 12345678 or 12345678-1)</p>
-            <p id="orderWoError" class="text-danger-red font-semibold text-sm mt-2 hidden">Enter a WO with 8 digits (e.g. 12345678 or 12345678-1)</p>
-
-            <label class="block text-sm font-semibold text-gray-600 mb-1 mt-4">Deliver To</label>
-            <select id="orderLocationInput" class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
-                <option value="" selected disabled>Deliver To</option>
-                <!-- LOCATIONS injected here at load -->
-            </select>
-            <p id="orderLocationError" class="text-danger-red font-semibold text-sm mt-2 hidden">Please select where these should be delivered</p>
-            <p id="orderLocationLockNote" class="text-xs text-gray-500 mt-1 hidden"></p>
-
-            <button class="w-full mt-4 py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md" onclick="submitOrderWO()">
-                Continue
-            </button>
-        </div>
-    </div>
-
-    <!-- VIEW 5: ADMIN - POLES ORDER - SIZE SELECTION -->
-    <div id="view-order-sizes" class="hidden">
-        <header class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-gray-200">
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
-                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm">
-                    <span class="text-xs font-semibold text-gray-500 mr-2 uppercase tracking-wider">WO:</span>
-                    <strong id="order-wo-display" class="text-primary-blue"></strong>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150" onclick="goToOrderWO()">
-                    &larr; Back
-                </button>
-                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md" onclick="goToOrderReview()">
-                    Order List (<span id="order-cart-counter-1">0</span>) &rarr;
-                </button>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-2 gap-3 mb-6 max-w-md">
-            <button id="orderBtnWood" class="py-4 rounded-lg font-bold text-lg transition" onclick="setOrderMaterial('wood')">Wood Poles</button>
-            <button id="orderBtnConcrete" class="py-4 rounded-lg font-bold text-lg transition" onclick="setOrderMaterial('concrete')">Concrete Poles</button>
-        </div>
-
-        <div id="order-size-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
-    </div>
-
-    <!-- VIEW 6: ADMIN - POLES ORDER - CLASS SELECTION -->
-    <div id="view-order-classes" class="hidden">
-        <header class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-gray-200">
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
-                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm">
-                    <strong id="order-classes-breadcrumb" class="text-primary-blue text-sm"></strong>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150" onclick="goToOrderSizes()">
-                    &larr; Back
-                </button>
-                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md" onclick="goToOrderReview()">
-                    Order List (<span id="order-cart-counter-2">0</span>) &rarr;
-                </button>
-            </div>
-        </header>
-
-        <div id="order-class-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
-    </div>
-
-    <!-- VIEW 7: ADMIN - POLES ORDER - QUANTITY -->
-    <div id="view-order-qty" class="hidden">
-        <header class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-4 border-b-2 border-gray-200">
-            <div class="flex items-center gap-3">
-                <h1 class="text-2xl font-extrabold text-gray-800">Poles Order</h1>
-                <div class="flex items-center bg-blue-50 border border-blue-200 rounded-md px-3 py-1.5 shadow-sm">
-                    <strong id="order-qty-breadcrumb" class="text-primary-blue text-sm"></strong>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button class="px-3 py-1.5 bg-gray-500 text-white text-sm font-bold rounded-md hover:bg-gray-600 transition duration-150" onclick="goToOrderClasses()">
-                    &larr; Back
-                </button>
-                <button class="px-3 py-1.5 bg-success-green text-white text-sm font-bold rounded-md hover:bg-green-700 transition duration-150 shadow-md" onclick="goToOrderReview()">
-                    Order List (<span id="order-cart-counter-3">0</span>) &rarr;
-                </button>
-            </div>
-        </header>
-
-        <div class="max-w-xs">
-            <label class="block text-sm font-semibold text-gray-600 mb-1">Quantity</label>
-            <input type="number" min="1" value="1" id="orderQtyInput"
-                   class="w-full p-3 border-2 border-gray-300 rounded-lg text-lg text-center focus:border-primary-blue focus:ring-2 focus:ring-blue-200 outline-none transition">
-            <button class="w-full mt-4 py-3 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md" onclick="addToOrderCart()">
-                Add to Order
-            </button>
-        </div>
-    </div>
-
-    <!-- VIEW 8: ADMIN - POLES ORDER - REVIEW -->
-    <div id="view-order-review" class="hidden">
-        <header class="flex justify-between items-center pb-4 mb-4 border-b-2 border-gray-200">
-            <h1 class="text-2xl font-extrabold text-gray-800">Poles Order - Review & Send</h1>
-            <div class="flex items-center gap-2">
-                <button class="px-4 py-2 bg-gray-400 text-white font-bold rounded-lg hover:bg-gray-500 transition duration-150 shadow-md" onclick="goToToc()">
-                    Home
-                </button>
-                <button class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150 shadow-md" onclick="goToOrderWO()">
-                    Add WO
-                </button>
-                <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 shadow-md" onclick="goToOrderSizes()">
-                    &larr; Back
-                </button>
-            </div>
-        </header>
-
-        <div class="bg-gray-200 p-4 rounded-lg mb-6 border border-gray-300">
-            <p class="font-semibold text-gray-800">Total Poles Selected: <span id="orderTotalItemsCount" class="text-primary-blue font-extrabold">0</span></p>
-        </div>
-
-        <div class="table-container">
-            <table id="orderReviewTable" class="w-full text-left">
-                <thead>
-                    <tr class="text-sm uppercase text-gray-600 border-b border-gray-300">
-                        <th class="py-3 px-4">WO #</th>
-                        <th class="py-3 px-4">Deliver To</th>
-                        <th class="py-3 px-4">Material</th>
-                        <th class="py-3 px-4">Size</th>
-                        <th class="py-3 px-4">Class</th>
-                        <th class="py-3 px-4">Qty</th>
-                        <th class="py-3 px-4">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="orderReviewTableBody"></tbody>
-            </table>
-        </div>
-
-        <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <h3 class="font-bold text-gray-700 mb-2">Total Pole Count</h3>
-            <div id="orderTotalsBreakdown" class="text-sm text-gray-700 space-y-1"></div>
-            <p class="mt-3 pt-3 border-t border-gray-300 font-extrabold text-primary-blue">Total: <span id="orderGrandTotal">0</span></p>
-        </div>
-
-        <div class="mt-8 pt-6 border-t border-gray-300">
-            <button class="w-full px-6 py-4 text-lg bg-success-green text-white font-extrabold rounded-lg hover:bg-green-700 transition duration-150 shadow-xl" onclick="openOrderEmailDraft()">
-                Send Email
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Floating Action Button for Clearing WO History -->
-<div id="utility-buttons" class="fixed bottom-4 right-4 z-40 hidden">
-    <button onclick="confirmClearWOHistory()" 
-            title="Clear WO History Suggestions"
-            class="p-2 bg-white text-gray-400 border border-gray-200 rounded-full shadow-lg hover:text-danger-red hover:bg-red-50 hover:border-red-200 transition-all duration-200 flex items-center gap-2 group">
-        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Clear WO History</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-    </button>
-</div>
-
-<div id="admin-trigger" class="fixed bottom-4 left-4 z-40 hidden">
-    <button onclick="openAdminPinModal()"
-            title="Management"
-            class="p-2 bg-white text-gray-300 border border-gray-100 rounded-full shadow-sm hover:text-gray-500 hover:bg-gray-50 hover:border-gray-200 transition-all duration-200 flex items-center gap-2 group">
-        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Management</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-    </button>
-</div>
-
-<script type="module">
-    // --- STATE VARIABLES ---
-    let materialDB = [];
-    let woHistory = [];
-    let cart = [];
-    let currentPage = 1;
-    const itemsPerPage = 200;
-    let currentFilteredList = []; 
-    
-    const EMBEDDED_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBmb-80reVNE4qZ_OvQ3_USfQNJHsjnmFvHXE733_4ijrIlsSvR0Mz9Wl6cbXcBtbod98pJrN4HPyL/pub?output=csv";
-    const APP_PASSCODE = "1945"; 
-    const ADMIN_PIN = "2026";
-    let adminUnlocked = false;
-    const APP_VERSION = "v8.1.37"; // Update this on every new version - shows in the corner badge and on every emailed report
-
-    const LOCATIONS = [
-        "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
-        "Haines City Jingoli", "Winter Garden Jingoli", "Orlando Jingoli",
-        "Apopka Jingoli", "Altamonte Jingoli", "Deland Jingoli",
-        "Costal Jingoli", "Seven Springs Jingoli", "Ocala Jingoli", "Jasper Jingoli"
-    ];
-
-    // Default email recipients per Location for the Poles Order email draft.
-    // Multiple addresses can be comma-separated within a single string, e.g. "a@x.com,b@x.com"
-    const DEFAULT_CC = '"DEF Material" <defmaterial@pike.com>';
-    const LOCATION_EMAILS = {
-        "Frostproof Pike Yard":  { to: "PD-HIGHLANDS@duke-energy.com", cc: DEFAULT_CC },
-        "Dundee Pike Yard":      { to: "PD-LAKEWALES@duke-energy.com", cc: DEFAULT_CC },
-        "Sebring Pike Yard":     { to: "PD-HIGHLANDS@duke-energy.com", cc: DEFAULT_CC },
-        "Haines City Jingoli":   { to: "jsilva@jingolipower.com;Leonardo.oliveros@eidsolutions.com;preyes@jingolipower.com", cc: DEFAULT_CC },
-        "Winter Garden Jingoli": { to: "Jose.Gonzales2@duke-energy.com", cc: DEFAULT_CC },
-        "Orlando Jingoli":       { to: "preyes@jingolipower.com", cc: DEFAULT_CC },
-        "Apopka Jingoli":        { to: "stephen.lagasse@jingolipower.com", cc: DEFAULT_CC },
-        "Altamonte Jingoli":     { to: "diego.martinez@jbmenergysolutions.com", cc: DEFAULT_CC },
-        "Deland Jingoli":        { to: "lmills@jbmenergysolutions.com", cc: DEFAULT_CC },
-        "Costal Jingoli":        { to: "msimon@jingolipower.com", cc: DEFAULT_CC },
-        "Seven Springs Jingoli": { to: "jrhoades@jingolipower.com", cc: DEFAULT_CC },
-        "Ocala Jingoli":         { to: "tdibiasio@jingolipower.com", cc: DEFAULT_CC },
-        "Jasper Jingoli":        { to: "robert.claxton@duke-energy.com", cc: DEFAULT_CC }
-    };
-
-    // CC recipients for the Material Tracker sign-in/out email draft
-    const MATERIAL_EMAIL_CC = [
-        '"DEF Material" <defmaterial@pike.com>',
-        '"Arnaldo Escobar" <AEscobar@pike.com>',
-        '"Josh Maynard" <JMMaynard@pike.com>',
-        '"Robert Baughman" <RBaughman@pike.com>',
-        '"James C. Thompson (GF)" <JCThompson@pike.com>',
-        '"Ronald Edwards" <REdwards@pike.com>'
-    ];
-
-    // --- POLES ORDER (ADMIN) STATE & DATA ---
-    let orderCart = [];
-    let orderWO = '';
-    let orderLocation = '';
-    let orderMaterial = 'wood';
-    let orderSize = null;
-    let orderClass = null;
-    const POLE_SIZES = ["30", "35", "40", "45", "50", "55", "60", "65"];
-    // Wood classes confirmed by user. Concrete is still PLACEHOLDER data pending confirmation.
-    const POLE_CLASSES = {
-        wood: {
-            "30": ["6"],
-            "35": ["2", "3", "5"],
-            "40": ["1", "2", "3", "4", "5", "H1"],
-            "45": ["1", "2", "3", "4", "H1", "H2"],
-            "50": ["1", "2", "3", "H1", "H3"],
-            "55": ["1", "2", "3", "H1", "H2", "H3"],
-            "60": ["H1"],
-            "65": []
-        },
-        concrete: { "30": ["6"], "35": ["5", "6"], "40": ["4", "5"], "45": ["3", "4"], "50": ["2", "3"], "55": ["2"], "60": ["1"], "65": ["1"] }
-    };
-
-    const STATIC_CATEGORIES = [
-        "Arresters", "Brackets", "Capacitors", "Conduit", "Controllers", "Crossarms",
-        "Enclosures", "Fuse/Cutout", "Indicators", "Light/Fixtures", "Poles",
-        "Reclosers", "Regulators", "Concrete/Structures", "Switches", "Switchgears",
-        "Transformers", "Wire/Cables"
-    ];
-    
-    const CATEGORY_ALIASES = {
-        "Brackets": ["Brackets", "Bracket"],
-        "Fuse/Cutout": ["Fuse Cutouts", "Fuse Cutout", "Fuse/Cutout", "Fuse / Cutout"],
-        "Light/Fixtures": ["Light Fixtures", "Light Fixture", "Light/Fixtures", "Light / Fixtures"],
-        "Concrete/Structures": ["Concrete Structures", "Concrete Structure", "Concrete/Structures", "Concrete / Structures"]
-    };
-
-    // --- UTILITIES ---
-    function showCustomAlert(message, title = 'Attention') {
-        const modal = document.getElementById('custom-modal');
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-message').innerText = message;
-        const buttons = document.getElementById('modal-buttons');
-        buttons.innerHTML = `<button class="px-4 py-2 bg-primary-blue text-white font-bold rounded-lg hover:bg-blue-700 transition duration-150" onclick="closeModal()">OK</button>`;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+    function renderHistory() {
+        const container = document.getElementById('historyList');
+        if (woHistory.length === 0) {
+            container.innerHTML = '<p class="text-sm text-gray-400">No history yet.</p>';
+            return;
+        }
+        container.innerHTML = woHistory.map(wo => `
+            <span class="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">${escapeHtml(wo)}</span>
+        `).join('');
     }
-
-    function showCustomConfirm(message, callback) {
-        const modal = document.getElementById('custom-modal');
-        document.getElementById('modal-title').innerText = 'Confirm Action';
-        document.getElementById('modal-message').innerText = message;
-        const buttons = document.getElementById('modal-buttons');
-        buttons.innerHTML = `
-            <button class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150" onclick="closeModal(); callback(false);">Cancel</button>
-            <button class="px-4 py-2 bg-success-green text-white font-bold rounded-lg hover:bg-green-700 transition duration-150" onclick="closeModal(); callback(true);">Yes, Proceed</button>
-        `;
-        window.callback = callback;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    }
-
-    function closeModal() {
-        const modal = document.getElementById('custom-modal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        window.callback = null;
-    }
-
-    window.showCustomAlert = showCustomAlert;
-    window.showCustomConfirm = showCustomConfirm;
-    window.closeModal = closeModal;
 
     function escapeHtml(str) {
-        if (str === null || str === undefined) return '';
         return String(str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -574,717 +90,95 @@
             .replace(/'/g, '&#39;');
     }
 
-    function formatLocationList(locations) {
-        if (locations.length === 0) return 'the selected location';
-        if (locations.length === 1) return locations[0];
-        if (locations.length === 2) return `${locations[0]} and ${locations[1]}`;
-        return `${locations.slice(0, -1).join(', ')}, and ${locations[locations.length - 1]}`;
-    }
-
-    const NUMBER_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen'];
-    function numberToWord(n) {
-        return NUMBER_WORDS[n] || String(n);
-    }
-
-    function compareMaterials(a, b) {
-        const aPriority = a.priority === 'P' ? 0 : 1;
-        const bPriority = b.priority === 'P' ? 0 : 1;
-        if (aPriority !== bPriority) return aPriority - bPriority;
-
-        // Wood poles (POLE-WD) are used far more often than concrete poles (POLE-CTE),
-        // so force WD to sort before CTE even though "C" would normally come before "W".
-        // Everything else, including ordering within the WD group and within the CTE
-        // group, still follows normal A-Z order.
-        const aIsWD = a.cu.startsWith('POLE-WD');
-        const bIsWD = b.cu.startsWith('POLE-WD');
-        const aIsCTE = a.cu.startsWith('POLE-CTE');
-        const bIsCTE = b.cu.startsWith('POLE-CTE');
-        if (aIsWD && bIsCTE) return -1;
-        if (aIsCTE && bIsWD) return 1;
-
-        return a.cu.localeCompare(b.cu);
-    }
-
-    // --- INITIALIZATION ---
-    window.onload = () => {
-        document.getElementById('version-badge').innerText = APP_VERSION;
-        if (sessionStorage.getItem('isLoggedIn') === 'true') {
-            unlockApp();
+    function showSuggestions() {
+        const term = input.value.trim().toUpperCase();
+        if (!term) {
+            hideSuggestions();
+            return;
         }
-        if (sessionStorage.getItem('adminUnlocked') === 'true') {
-            adminUnlocked = true;
+        currentMatches = woHistory.filter(wo => wo.toUpperCase().includes(term));
+        activeSuggestionIndex = -1;
+
+        if (currentMatches.length === 0) {
+            hideSuggestions();
+            return;
         }
-    };
 
-    function checkPasscode() {
-        const input = document.getElementById('passcodeInput');
-        if (input.value === APP_PASSCODE) {
-            sessionStorage.setItem('isLoggedIn', 'true');
-            unlockApp();
-        } else {
-            document.getElementById('login-error').classList.remove('hidden');
-            input.value = '';
-        }
-    }
-    window.checkPasscode = checkPasscode;
-    
-    function unlockApp() {
-        document.getElementById('view-login').classList.add('hidden');
-        document.getElementById('view-toc').classList.remove('hidden');
-        document.getElementById('utility-buttons').classList.remove('hidden');
-        document.getElementById('admin-trigger').classList.remove('hidden');
-        loadSettings();
-        syncFromEmbeddedSheet();
-        updateCartCounter();
-        populateOrderLocationSelect();
+        suggestionsBox.innerHTML = currentMatches.map((wo, i) => `
+            <div data-index="${i}"
+                 class="suggestion-item px-3 py-2 text-sm font-mono cursor-pointer hover:bg-blue-50"
+                 onmousedown="selectSuggestion(${i})">
+                ${escapeHtml(wo)}
+            </div>
+        `).join('');
+        suggestionsBox.classList.remove('hidden');
     }
 
-    function populateOrderLocationSelect() {
-        const select = document.getElementById('orderLocationInput');
-        LOCATIONS.forEach(loc => {
-            const opt = document.createElement('option');
-            opt.value = loc;
-            opt.textContent = loc;
-            select.appendChild(opt);
-        });
-    }
-    
-    function loadSettings() {
-        const savedWOs = localStorage.getItem('woHistory');
-        if(savedWOs) woHistory = JSON.parse(savedWOs);
-        updateDatalist();
+    function hideSuggestions() {
+        suggestionsBox.classList.add('hidden');
+        suggestionsBox.innerHTML = '';
+        currentMatches = [];
+        activeSuggestionIndex = -1;
     }
 
-    async function syncFromEmbeddedSheet() {
-        const statusBadge = document.getElementById('db-status-badge');
-        if(!statusBadge) return;
-        statusBadge.innerHTML = `<span class="text-lg">&#8635;</span> Syncing...`;
-        try {
-            const response = await fetch(EMBEDDED_SHEET_URL + "&t=" + new Date().getTime());
-            if (!response.ok) throw new Error("Sync Failed");
-            const csvText = await response.text();
-            const results = Papa.parse(csvText, { header: false, skipEmptyLines: true });
-            const rows = results.data;
-            let newData = [];
-            for (let i = 1; i < rows.length; i++) {
-                const cols = rows[i];
-                if (cols.length >= 2 && cols[0] && cols[1]) {
-                    newData.push({
-                        cu: cols[0].trim(),   // Column A - CU: the compatible-unit code, e.g. "ARR-ELBOW-10KV-F" (this is the actual unique key)
-                        id: cols[1].trim(),   // Column B - ID: a numeric material id, can repeat across multiple CU codes
-                        desc: cols[2] ? cols[2].trim() : 'No Description',
-                        category: cols[3] ? cols[3].trim() : 'Uncategorized',
-                        priority: cols[4] ? cols[4].trim().toUpperCase() : ''   // Column E - "P" marks a most-used item to sort first
-                    });
-                }
-            }
-
-            // Priority ("P") items first, then alphabetical by CU within each group
-            newData.sort(compareMaterials);
-
-            if (newData.length > 0) {
-                 materialDB = newData;
-                 localStorage.setItem('materialDB', JSON.stringify(materialDB));
-                 statusBadge.innerHTML = `<span class="text-lg">&#9989;</span> ${newData.length} Items`;
-                 renderToc();
-            }
-        } catch (error) {
-            statusBadge.innerHTML = `<span class="text-lg">&#10060;</span> Offline Mode`;
-            const savedData = localStorage.getItem('materialDB');
-            if (savedData) {
-                materialDB = JSON.parse(savedData);
-                renderToc();
-            }
-        }
+    function selectSuggestion(i) {
+        input.value = currentMatches[i];
+        hideSuggestions();
+        input.focus();
     }
-    window.syncFromEmbeddedSheet = syncFromEmbeddedSheet;
 
-    // --- NAVIGATION ---
-    function renderToc() {
-        const container = document.getElementById('toc-buttons');
-        if(!container) return;
-        container.innerHTML = `<button class="w-full p-6 bg-primary-blue text-white font-bold rounded-lg shadow-md hover:bg-blue-700 transition" onclick="goToCategory('All Materials')">View All Materials</button>`;
-        STATIC_CATEGORIES.forEach(category => {
-            container.innerHTML += `<button class="w-full p-6 bg-white text-primary-blue border-2 border-primary-blue font-bold rounded-lg shadow-sm hover:bg-blue-50 transition" onclick="goToCategory('${category}')">${category}</button>`;
+    function highlightActive() {
+        const items = suggestionsBox.querySelectorAll('.suggestion-item');
+        items.forEach((el, i) => {
+            el.classList.toggle('bg-blue-100', i === activeSuggestionIndex);
         });
     }
 
-    const ALL_VIEWS = ['view-toc', 'view-selection', 'view-review', 'view-order-wo', 'view-order-sizes', 'view-order-classes', 'view-order-qty', 'view-order-review'];
-    function showView(id) {
-        ALL_VIEWS.forEach(v => document.getElementById(v).classList.toggle('hidden', v !== id));
-    }
+    // Key point: this is a plain input listener, not the native list="" attribute,
+    // so there's no browser-owned popup competing for focus with a physical keyboard.
+    input.addEventListener('input', showSuggestions);
 
-    function goToCategory(cat) {
-        document.getElementById('current-filter-category').innerText = cat;
-        showView('view-selection');
-        filterMaterials();
-    }
-    window.goToCategory = goToCategory;
-
-    function goToToc() {
-        showView('view-toc');
-    }
-    window.goToToc = goToToc;
-
-    function performGlobalSearch(term) {
-        if (!term) return;
-        goToCategory('All Materials');
-        document.getElementById('searchInput').value = term;
-        filterMaterials();
-    }
-    window.performGlobalSearch = performGlobalSearch;
-
-    // --- MATERIAL SEARCH & TABLE ---
-    function filterMaterials() {
-        const category = document.getElementById('current-filter-category').innerText;
-        const term = document.getElementById('searchInput').value.toLowerCase();
-        let baseData = materialDB;
-
-        if (category !== 'All Materials') {
-            baseData = materialDB.filter(item => {
-                const itemCat = item.category.trim();
-                const targetCat = category.trim();
-                return itemCat === targetCat || (CATEGORY_ALIASES[targetCat] && CATEGORY_ALIASES[targetCat].includes(itemCat));
-            });
-        }
-        
-        if (term) {
-            baseData = baseData.filter(item => 
-                item.cu.toLowerCase().includes(term) ||
-                item.id.toLowerCase().includes(term) ||
-                item.desc.toLowerCase().includes(term)
-            );
-        }
-
-        // Always re-sort just in case
-        currentFilteredList = baseData.sort(compareMaterials);
-        currentPage = 1;
-        renderTable();
-    }
-    window.filterMaterials = filterMaterials;
-
-    function renderTable() {
-        const totalItems = currentFilteredList.length;
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        const paginationDiv = document.getElementById('pagination-top');
-        
-        if (totalItems > itemsPerPage) {
-            paginationDiv.classList.remove('hidden');
-            let btns = `<button onclick="changePage(-1)" class="px-3 py-1 bg-white border rounded" ${currentPage === 1 ? 'disabled' : ''}>&larr;</button>`;
-            const windowSize = 5;
-            let startPage = Math.max(1, currentPage - Math.floor(windowSize / 2));
-            let endPage = Math.min(totalPages, startPage + windowSize - 1);
-            startPage = Math.max(1, endPage - windowSize + 1);
-            for (let i = startPage; i <= endPage; i++) {
-                btns += `<button onclick="goToPage(${i})" class="px-3 py-1 border rounded ${i === currentPage ? 'bg-primary-blue text-white' : 'bg-white'}">${i}</button>`;
+    input.addEventListener('keydown', (e) => {
+        if (suggestionsBox.classList.contains('hidden')) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, currentMatches.length - 1);
+            highlightActive();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+            highlightActive();
+        } else if (e.key === 'Enter') {
+            if (activeSuggestionIndex > -1) {
+                e.preventDefault();
+                selectSuggestion(activeSuggestionIndex);
+            } else {
+                hideSuggestions();
             }
-            btns += `<button onclick="changePage(1)" class="px-3 py-1 bg-white border rounded" ${currentPage === totalPages ? 'disabled' : ''}>&rarr;</button>`;
-            paginationDiv.innerHTML = `<div class="flex justify-center gap-2">${btns}</div>`;
-        } else { paginationDiv.classList.add('hidden'); }
-
-        const displayData = currentFilteredList.slice((currentPage-1)*itemsPerPage, currentPage*itemsPerPage);
-        const pageOffset = (currentPage-1)*itemsPerPage;
-        const tbody = document.getElementById('materialTableBody');
-        tbody.innerHTML = "";
-
-        const locationOptions = LOCATIONS.map(loc => `<option value="${loc}">${loc}</option>`).join('');
-
-        displayData.forEach((item, i) => {
-            const rowIndex = pageOffset + i;
-            const safeId = 'row' + rowIndex;
-            const matKey = `${item.cu}::${item.id}`;
-            tbody.innerHTML += `
-                <tr class="hover:bg-gray-50 border-b">
-                    <td class="py-3 px-4 align-top font-bold text-primary-blue">${escapeHtml(item.id)}</td>
-                    <td class="py-3 px-4 align-top"><strong>${escapeHtml(item.cu)}</strong><br><span class="text-xs text-gray-500">${escapeHtml(item.desc)}</span></td>
-                    <td class="py-3 px-4 align-top">
-                        <div class="flex flex-col space-y-2 lg:flex-row lg:space-y-0 lg:space-x-2 items-start lg:items-center">
-                            <div class="flex items-center w-32 lg:w-36">
-                                <input type="text" id="wo-${safeId}" class="p-2 border rounded-l w-full text-sm" placeholder="WO#" list="wo-history-list" autocomplete="off">
-                                <button id="plus-${safeId}" class="p-2 border-y border-r rounded-r bg-gray-100 font-bold" onclick="quickAddFromRow('${safeId}')">+</button>
-                            </div>
-                            <select id="type-${safeId}" class="p-2 border rounded text-sm w-24"><option value="" selected disabled>Type</option><option value="Issue">Issue</option><option value="Credit">Credit</option></select>
-                            <select id="source-${safeId}" class="p-2 border rounded text-sm w-40"><option value="" selected disabled>Location</option>${locationOptions}</select>
-                            <input type="number" min="1" value="1" id="qty-${safeId}" class="p-2 border rounded w-16 text-center text-sm">
-                            <button class="p-2 bg-primary-blue text-white font-bold rounded hover:bg-blue-700" onclick="addToCart(${rowIndex}, '${safeId}')">Add</button>
-                        </div>
-                        <div id="preview-${safeId}" class="flex flex-wrap gap-2 mt-2">${generatePreviewHTML(matKey, safeId)}</div>
-                    </td>
-                </tr>
-            `;
-        });
-    }
-    window.changePage = (dir) => { currentPage += dir; renderTable(); };
-    window.goToPage = (num) => { currentPage = num; renderTable(); };
-
-    // --- CART LOGIC ---
-    function addToCart(rowIndex, safeId) {
-        const itemObj = currentFilteredList[rowIndex];
-        const qtyRaw = document.getElementById(`qty-${safeId}`).value;
-        const qty = parseInt(qtyRaw, 10);
-        const wo = document.getElementById(`wo-${safeId}`).value.trim().toUpperCase();
-        const type = document.getElementById(`type-${safeId}`).value;
-        const source = document.getElementById(`source-${safeId}`).value;
-
-        if (!wo || !wo.includes('-')) {
-            showCustomAlert("Please enter a valid WO (e.g., 12345678-1).", "WO Invalid");
-            return;
+        } else if (e.key === 'Escape') {
+            hideSuggestions();
         }
-        if (!type) {
-            showCustomAlert("Please select a Type (Issue or Credit).", "Type Required");
-            return;
-        }
-        if (!source) {
-            showCustomAlert("Please select a Location.", "Location Required");
-            return;
-        }
-        if (isNaN(qty) || qty <= 0 || String(qty) !== qtyRaw.trim()) {
-            showCustomAlert("Please enter a valid whole number quantity.", "Quantity Invalid");
-            return;
-        }
+    });
 
-        registerWO(wo);
-        const matKey = `${itemObj.cu}::${itemObj.id}`;
-        const existing = cart.findIndex(x => x.matKey === matKey && x.wo === wo && x.type === type && x.source === source);
-        if (existing > -1) cart[existing].qty += qty;
-        else cart.push({ ...itemObj, matKey, transactionId: crypto.randomUUID(), qty, wo, type, source });
+    input.addEventListener('blur', () => {
+        // Small delay so a click/tap on a suggestion still registers before we hide it
+        setTimeout(hideSuggestions, 150);
+    });
 
-        document.getElementById(`preview-${safeId}`).innerHTML = generatePreviewHTML(matKey, safeId);
-        updateCartCounter();
-        const btn = document.querySelector(`button[onclick*="addToCart(${rowIndex},"]`);
-        if (btn) {
-            btn.innerText = "✓";
-            setTimeout(() => btn.innerText = "Add", 800);
-        }
-    }
-    window.addToCart = addToCart;
-
-    function generatePreviewHTML(matKey, safeId) {
-        return cart.filter(c => c.matKey === matKey).map(item => `
-            <span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded border-l-4 ${item.type === 'Issue' ? 'border-primary-blue bg-blue-50' : 'border-danger-red bg-red-50'}">
-                <strong>${escapeHtml(item.wo)}</strong>: ${item.qty}
-                <span class="ml-2 cursor-pointer font-bold" onclick="removeFromPreview('${item.transactionId}', '${matKey}', '${safeId}')">&times;</span>
-            </span>`).join('');
-    }
-    window.removeFromPreview = (tid, matKey, safeId) => {
-        const idx = cart.findIndex(x => x.transactionId === tid);
-        if (idx > -1) {
-            cart.splice(idx, 1);
-            const el = document.getElementById(`preview-${safeId}`);
-            if(el) el.innerHTML = generatePreviewHTML(matKey, safeId);
-            updateCartCounter();
-        }
-    };
-
-    function updateCartCounter() {
-        const count = cart.length;
-        document.getElementById('cart-counter').innerText = count;
-        document.getElementById('selection-cart-counter').innerText = count;
-    }
-
-    // --- WO HISTORY ---
-    function registerWO(wo) {
-        const val = wo.trim().toUpperCase();
-        if(val && !woHistory.includes(val)) {
+    function saveCurrentWO() {
+        const val = input.value.trim().toUpperCase();
+        if (val && !woHistory.includes(val)) {
             woHistory.push(val);
-            localStorage.setItem('woHistory', JSON.stringify(woHistory));
-            updateDatalist();
-        }
-    }
-    function updateDatalist() {
-        document.getElementById('wo-history-list').innerHTML = woHistory.map(wo => `<option value="${wo}">`).join('');
-    }
-    function quickAddFromRow(id) {
-        const input = document.getElementById(`wo-${id}`);
-        if(input.value.includes('-')) registerWO(input.value);
-    }
-    window.quickAddFromRow = quickAddFromRow;
-
-    function confirmClearWOHistory() {
-        showCustomConfirm("Clear saved WO suggestions?", (confirmed) => {
-            if (confirmed) {
-                woHistory = [];
-                localStorage.removeItem('woHistory');
-                updateDatalist();
-            }
-        });
-    }
-    window.confirmClearWOHistory = confirmClearWOHistory;
-
-    // --- REVIEW & EXPORT ---
-    function goToReview() {
-        if (cart.length === 0) return showCustomAlert("Review list is empty.");
-        showView('view-review');
-        renderReview();
-    }
-    window.goToReview = goToReview;
-
-    function goBack() {
-        showView('view-selection');
-    }
-    window.goBack = goBack;
-
-    function renderReview() {
-        document.getElementById('totalItemsCount').innerText = cart.length;
-        document.getElementById('reviewTableBody').innerHTML = cart.sort((a,b) => a.wo.localeCompare(b.wo)).map(item => `
-            <tr class="border-b">
-                <td class="py-3 px-4 font-mono">${escapeHtml(item.wo)}</td>
-                <td class="py-3 px-4"><span class="px-2 py-1 rounded text-xs font-bold ${item.type === 'Issue' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">${escapeHtml(item.type)}</span></td>
-                <td class="py-3 px-4 text-sm">${escapeHtml(item.source)}</td>
-                <td class="py-3 px-4 font-bold">${escapeHtml(item.id)}</td>
-                <td class="py-3 px-4 text-xs">${escapeHtml(item.desc)}</td>
-                <td class="py-3 px-4 font-extrabold">${item.qty}</td>
-                <td class="py-3 px-4"><button class="bg-red-500 text-white px-2 py-1 rounded text-xs" onclick="removeFromReviewTable('${item.transactionId}')">Remove</button></td>
-            </tr>
-        `).join('');
-    }
-    window.removeFromReviewTable = (tid) => {
-        const idx = cart.findIndex(i => i.transactionId === tid);
-        if (idx > -1) { cart.splice(idx, 1); renderReview(); updateCartCounter(); }
-    };
-
-    function openEmailDraft() {
-        const uniqueWOs = [...new Set(cart.map(i => i.wo))];
-        const subject = `Material Request - WOs: ${uniqueWOs.join(', ')}`;
-        const uniqueSources = [...new Set(cart.map(i => i.source).filter(Boolean))];
-
-        let body = `MATERIAL REPORT ${APP_VERSION}\n`;
-        if (uniqueSources.length > 1) {
-            body += `From ${numberToWord(uniqueSources.length)} different Locations (${formatLocationList(uniqueSources)})\n`;
-        }
-        body += `\n`;
-        cart.forEach(i => body += `WO: ${i.wo} | ${i.type} | Loc: ${i.source} | ID: ${i.id} | Qty: ${i.qty}\n`);
-
-        // If any location in this order is not a Jingoli yard (i.e. a Pike yard),
-        // DEF Material goes in To instead of CC for that email.
-        const defMaterialAddr = MATERIAL_EMAIL_CC[0]; // '"DEF Material" <defmaterial@pike.com>'
-        const hasNonJingoli = uniqueSources.some(loc => !loc.includes('Jingoli'));
-
-        const toSet = new Set();
-        if (hasNonJingoli) toSet.add(defMaterialAddr);
-
-        // Pull in each Jingoli location's specific contact - whether there's just
-        // one Jingoli yard on this order or several. Pike yards are already
-        // represented by DEF Material above, so they don't get a separate
-        // per-location contact here.
-        uniqueSources.forEach(loc => {
-            if (loc.includes('Jingoli')) {
-                const entry = LOCATION_EMAILS[loc];
-                if (entry && entry.to) {
-                    entry.to.split(';').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
-                }
-            }
-        });
-
-        const ccList = hasNonJingoli ? MATERIAL_EMAIL_CC.filter(e => e !== defMaterialAddr) : MATERIAL_EMAIL_CC;
-
-        const to = [...toSet].map(e => encodeURIComponent(e)).join(',');
-        const cc = ccList.map(e => encodeURIComponent(e)).join(',');
-
-        let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        if (cc) mailtoUrl += `&cc=${cc}`;
-        window.location.href = mailtoUrl;
-    }
-    window.openEmailDraft = openEmailDraft;
-
-    // --- ADMIN PIN GATE ---
-    function openAdminPinModal() {
-        if (adminUnlocked) {
-            goToOrderWO();
-            return;
-        }
-        document.getElementById('adminPinInput').value = '';
-        document.getElementById('admin-pin-error').classList.add('hidden');
-        const modal = document.getElementById('admin-pin-modal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        document.getElementById('adminPinInput').focus();
-    }
-    window.openAdminPinModal = openAdminPinModal;
-
-    function closeAdminPinModal() {
-        const modal = document.getElementById('admin-pin-modal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }
-    window.closeAdminPinModal = closeAdminPinModal;
-
-    function checkAdminPin() {
-        const val = document.getElementById('adminPinInput').value;
-        if (val === ADMIN_PIN) {
-            adminUnlocked = true;
-            sessionStorage.setItem('adminUnlocked', 'true');
-            closeAdminPinModal();
-            goToOrderWO();
-        } else {
-            document.getElementById('admin-pin-error').classList.remove('hidden');
-            document.getElementById('adminPinInput').value = '';
-            document.getElementById('adminPinInput').focus();
-        }
-    }
-    window.checkAdminPin = checkAdminPin;
-
-    // --- POLES ORDER (ADMIN) ---
-    function applyOrderLocationLock() {
-        const select = document.getElementById('orderLocationInput');
-        const lockNote = document.getElementById('orderLocationLockNote');
-        if (orderCart.length > 0) {
-            const lockedLoc = orderCart[0].location;
-            Array.from(select.options).forEach(opt => {
-                opt.disabled = (opt.value !== '' && opt.value !== lockedLoc);
-            });
-            select.value = lockedLoc;
-            select.disabled = true;
-            lockNote.textContent = `Locked to ${lockedLoc} for this order - this batch already has poles going there.`;
-            lockNote.classList.remove('hidden');
-        } else {
-            Array.from(select.options).forEach(opt => { opt.disabled = false; });
-            select.disabled = false;
-            select.value = '';
-            lockNote.classList.add('hidden');
+            renderHistory();
         }
     }
 
-    function goToOrderWO() {
-        document.getElementById('orderWoError').classList.add('hidden');
-        document.getElementById('orderLocationError').classList.add('hidden');
-        applyOrderLocationLock();
-        showView('view-order-wo');
-    }
-    window.goToOrderWO = goToOrderWO;
-
-    function submitOrderWO() {
-        const wo = document.getElementById('orderWoInput').value.trim().toUpperCase();
-        const location = document.getElementById('orderLocationInput').value;
-
-        if (!/^\d{8}(-\d+)?$/.test(wo)) {
-            document.getElementById('orderWoError').classList.remove('hidden');
-            return;
-        }
-        document.getElementById('orderWoError').classList.add('hidden');
-
-        if (!location) {
-            document.getElementById('orderLocationError').classList.remove('hidden');
-            return;
-        }
-        document.getElementById('orderLocationError').classList.add('hidden');
-
-        orderWO = wo;
-        orderLocation = location;
-        registerWO(wo);
-        goToOrderSizes();
-    }
-    window.submitOrderWO = submitOrderWO;
-
-    function goToOrderSizes() {
-        document.getElementById('order-wo-display').innerText = orderWO;
-        setOrderMaterial(orderMaterial);
-        showView('view-order-sizes');
-    }
-    window.goToOrderSizes = goToOrderSizes;
-
-    function setOrderMaterial(m) {
-        orderMaterial = m;
-        const woodBtn = document.getElementById('orderBtnWood');
-        const concreteBtn = document.getElementById('orderBtnConcrete');
-        woodBtn.className = 'py-4 rounded-lg font-bold text-lg transition ' + (m === 'wood' ? 'bg-primary-blue text-white' : 'bg-white text-primary-blue border-2 border-primary-blue');
-        concreteBtn.className = 'py-4 rounded-lg font-bold text-lg transition ' + (m === 'concrete' ? 'bg-gray-700 text-white' : 'bg-white text-gray-700 border-2 border-gray-400');
-        renderOrderSizeGrid();
-    }
-    window.setOrderMaterial = setOrderMaterial;
-
-    function renderOrderSizeGrid() {
-        const grid = document.getElementById('order-size-grid');
-        grid.innerHTML = POLE_SIZES.map(sz => `
-            <button class="py-8 text-2xl font-extrabold rounded-lg bg-white text-primary-blue border-2 border-primary-blue hover:bg-blue-50 transition" onclick="pickOrderSize('${sz}')">${sz}</button>
-        `).join('');
+    function clearHistory() {
+        woHistory = [];
+        renderHistory();
     }
 
-    function pickOrderSize(sz) {
-        orderSize = sz;
-        orderClass = null;
-        const options = (POLE_CLASSES[orderMaterial] && POLE_CLASSES[orderMaterial][sz]) ? POLE_CLASSES[orderMaterial][sz] : [];
-        const materialLabel = orderMaterial === 'wood' ? 'Wood' : 'Concrete';
-        const grid = document.getElementById('order-class-grid');
-        if (options.length === 0) {
-            grid.innerHTML = `<p class="col-span-full text-gray-500">No classes defined yet for this size.</p>`;
-        } else {
-            grid.innerHTML = options.map(c => {
-                const alreadyQty = orderCart
-                    .filter(i => i.wo === orderWO && i.material === materialLabel && i.size === sz && i.cls === c)
-                    .reduce((sum, i) => sum + i.qty, 0);
-                const badge = alreadyQty > 0
-                    ? `<span class="block text-xs font-semibold text-success-green mt-1">Already added: ${alreadyQty}</span>`
-                    : '';
-                return `
-                <button class="py-6 text-xl font-bold rounded-lg bg-white text-primary-blue border-2 border-primary-blue hover:bg-blue-50 transition" onclick="pickOrderClass('${c}')">
-                    Class ${escapeHtml(c)}${badge}
-                </button>`;
-            }).join('');
-        }
-        document.getElementById('order-classes-breadcrumb').innerText = `${materialLabel} / ${sz} ft`;
-        showView('view-order-classes');
-    }
-    window.pickOrderSize = pickOrderSize;
-
-    function pickOrderClass(c) {
-        orderClass = c;
-        document.getElementById('orderQtyInput').value = 1;
-        document.getElementById('order-qty-breadcrumb').innerText = `${orderMaterial === 'wood' ? 'Wood' : 'Concrete'} / ${orderSize} ft / Class ${c}`;
-        showView('view-order-qty');
-    }
-    window.pickOrderClass = pickOrderClass;
-
-    function goToOrderClasses() {
-        // Clears the in-progress class/qty selection and re-renders the class grid for the current size
-        pickOrderSize(orderSize);
-    }
-    window.goToOrderClasses = goToOrderClasses;
-
-    function addToOrderCart() {
-        const qtyRaw = document.getElementById('orderQtyInput').value;
-        const qty = parseInt(qtyRaw, 10);
-        if (isNaN(qty) || qty <= 0 || String(qty) !== qtyRaw.trim()) {
-            showCustomAlert("Please enter a valid whole number quantity.", "Quantity Invalid");
-            return;
-        }
-        orderCart.push({
-            transactionId: crypto.randomUUID(),
-            wo: orderWO,
-            location: orderLocation,
-            material: orderMaterial === 'wood' ? 'Wood' : 'Concrete',
-            size: orderSize,
-            cls: orderClass,
-            qty
-        });
-        updateOrderCartCounter();
-        goToOrderSizes();
-    }
-    window.addToOrderCart = addToOrderCart;
-
-    function updateOrderCartCounter() {
-        const count = orderCart.length;
-        ['order-cart-counter-0', 'order-cart-counter-1', 'order-cart-counter-2', 'order-cart-counter-3'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = count;
-        });
-    }
-
-    function goToOrderReview() {
-        if (orderCart.length === 0) return showCustomAlert("Order list is empty.");
-        showView('view-order-review');
-        renderOrderReview();
-    }
-    window.goToOrderReview = goToOrderReview;
-
-    function getPoleTotals() {
-        const totals = {};
-        orderCart.forEach(item => {
-            const key = `${item.material}|${item.size}|${item.cls}`;
-            if (!totals[key]) totals[key] = { material: item.material, size: item.size, cls: item.cls, qty: 0 };
-            totals[key].qty += item.qty;
-        });
-        const list = Object.values(totals);
-        list.sort((a, b) => {
-            if (a.material !== b.material) return a.material === 'Wood' ? -1 : 1;
-            const sizeDiff = parseInt(a.size, 10) - parseInt(b.size, 10);
-            if (sizeDiff !== 0) return sizeDiff;
-            return a.cls.localeCompare(b.cls);
-        });
-        const grandTotal = list.reduce((sum, t) => sum + t.qty, 0);
-        return { list, grandTotal };
-    }
-
-    function groupCartByWO(items) {
-        const groups = [];
-        const groupIndexByWO = {};
-        items.forEach(item => {
-            if (!(item.wo in groupIndexByWO)) {
-                groupIndexByWO[item.wo] = groups.length;
-                groups.push([]);
-            }
-            groups[groupIndexByWO[item.wo]].push(item);
-        });
-        return groups.flat();
-    }
-
-    function renderOrderReview() {
-        document.getElementById('orderTotalItemsCount').innerText = orderCart.length;
-        document.getElementById('orderReviewTableBody').innerHTML = groupCartByWO(orderCart).map(item => `
-            <tr class="border-b">
-                <td class="py-3 px-4 font-mono">${escapeHtml(item.wo)}</td>
-                <td class="py-3 px-4 text-sm">${escapeHtml(item.location)}</td>
-                <td class="py-3 px-4">${escapeHtml(item.material)}</td>
-                <td class="py-3 px-4 font-bold">${escapeHtml(item.size)} ft</td>
-                <td class="py-3 px-4">Class ${escapeHtml(item.cls)}</td>
-                <td class="py-3 px-4 font-extrabold">${item.qty}</td>
-                <td class="py-3 px-4"><button class="bg-red-500 text-white px-2 py-1 rounded text-xs" onclick="removeFromOrderCart('${item.transactionId}')">Remove</button></td>
-            </tr>
-        `).join('');
-
-        const { list, grandTotal } = getPoleTotals();
-        document.getElementById('orderTotalsBreakdown').innerHTML = list.length > 0
-            ? list.map(t => `<div class="flex justify-between max-w-xs"><span>${escapeHtml(t.material)} ${escapeHtml(t.size)} / ${escapeHtml(t.cls)}</span><strong>Qty: ${t.qty}</strong></div>`).join('')
-            : '<p class="text-gray-400">No poles selected.</p>';
-        document.getElementById('orderGrandTotal').innerText = grandTotal;
-    }
-
-    window.removeFromOrderCart = (tid) => {
-        const idx = orderCart.findIndex(i => i.transactionId === tid);
-        if (idx > -1) { orderCart.splice(idx, 1); renderOrderReview(); updateOrderCartCounter(); }
-    };
-
-    function openOrderEmailDraft() {
-        const uniqueWOs = [...new Set(orderCart.map(i => i.wo))];
-        const subject = `Poles Order - WOs: ${uniqueWOs.join(', ')}`;
-
-        // Combine To/CC recipients across every distinct delivery location present in this order
-        const uniqueLocations = [...new Set(orderCart.map(i => i.location).filter(Boolean))];
-        const toSet = new Set();
-        const ccSet = new Set(MATERIAL_EMAIL_CC); // same 6 people CC'd on the Material side
-        uniqueLocations.forEach(loc => {
-            const entry = LOCATION_EMAILS[loc];
-            if (!entry) return;
-            entry.to.split(';').map(e => e.trim()).filter(Boolean).forEach(e => toSet.add(e));
-            entry.cc.split(';').map(e => e.trim()).filter(Boolean).forEach(e => ccSet.add(e));
-        });
-        const to = [...toSet].map(e => encodeURIComponent(e)).join(',');
-        const cc = [...ccSet].map(e => encodeURIComponent(e)).join(',');
-
-        const deliveryLocationText = formatLocationList(uniqueLocations);
-        let body = `Hello,\n\nCould we get the following poles delivered to ${deliveryLocationText}.\nThanks!\n\n`;
-
-        const { list: totalsList, grandTotal } = getPoleTotals();
-        body += `TOTAL POLE COUNT ${APP_VERSION}\n\n`;
-        totalsList.forEach(t => body += `${t.material} ${t.size}  /  ${t.cls}   Qty: ${t.qty}\n`);
-        body += `\nTotal: ${grandTotal}\n\n`;
-        body += `${'-'.repeat(35)}\n\n`;
-
-        // Group items by WO, in order of first appearance
-        const groups = [];
-        const groupIndexByWO = {};
-        orderCart.forEach(item => {
-            if (!(item.wo in groupIndexByWO)) {
-                groupIndexByWO[item.wo] = groups.length;
-                groups.push({ wo: item.wo, items: [] });
-            }
-            groups[groupIndexByWO[item.wo]].items.push(item);
-        });
-
-        groups.forEach((group, gIdx) => {
-            body += `WO: ${group.wo}\n`;
-            group.items.forEach(item => {
-                body += `  \u2022 ${item.material} | Size: ${item.size}  /  ${item.cls} | Qty: ${item.qty}\n`;
-            });
-            if (gIdx < groups.length - 1) body += '\n\n'; // bigger gap between different WOs
-        });
-
-        let mailtoUrl = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        if (cc) mailtoUrl += `&cc=${cc}`;
-        window.location.href = mailtoUrl;
-    }
-    window.openOrderEmailDraft = openOrderEmailDraft;
-
+    renderHistory();
 </script>
 </body>
 </html>
