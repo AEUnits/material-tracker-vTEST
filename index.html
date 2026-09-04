@@ -81,6 +81,25 @@
     </div>
 </div>
 
+<!-- Date picker modal - a large custom calendar rather than the small native date input -->
+<div id="date-picker-modal" class="modal-overlay fixed inset-0 bg-black bg-opacity-60 z-[1000] hidden justify-center items-center">
+    <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-11/12">
+        <div class="flex items-center justify-between mb-4">
+            <button type="button" onclick="changeCalendarMonth(-1)" class="p-2 rounded-full hover:bg-gray-100 transition text-gray-600 text-xl font-bold leading-none">&lsaquo;</button>
+            <h4 id="calendarMonthLabel" class="text-lg font-extrabold text-gray-800"></h4>
+            <button type="button" onclick="changeCalendarMonth(1)" class="p-2 rounded-full hover:bg-gray-100 transition text-gray-600 text-xl font-bold leading-none">&rsaquo;</button>
+        </div>
+        <div class="grid grid-cols-7 gap-1 mb-1 text-center text-xs font-bold text-gray-500 uppercase">
+            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+        <div class="flex justify-between items-center mt-5 pt-4 border-t border-gray-200">
+            <button type="button" onclick="selectCalendarToday()" class="text-sm font-semibold text-primary-blue hover:underline">Today</button>
+            <button type="button" onclick="closeDatePicker()" class="px-4 py-2 bg-gray-500 text-white font-bold rounded-lg hover:bg-gray-600 transition duration-150 text-sm">Cancel</button>
+        </div>
+    </div>
+</div>
+
 <!-- Custom WO suggestion dropdown (replaces native <datalist> - avoids the Bluetooth
      keyboard focus-stealing bug some devices hit with browser-native autocomplete) -->
 <div id="wo-suggestions-box" class="hidden fixed z-[1500] bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto"></div>
@@ -240,8 +259,15 @@
                         <option value="Emergent">Emergent</option>
                     </select>
                 </div>
+                <div class="flex items-center gap-2">
+                    <label class="font-semibold text-gray-800 whitespace-nowrap">Date:</label>
+                    <button type="button" id="dateDisplayBtn" onclick="openDatePicker()"
+                            class="border-b-2 border-gray-500 bg-transparent px-1 py-0.5 text-left hover:border-primary-blue transition">
+                        Select date
+                    </button>
+                </div>
             </div>
-            <p id="reviewInfoError" class="text-danger-red font-semibold text-sm mt-3 hidden">Please fill in GF, Foreman, and Job Type before sending.</p>
+            <p id="reviewInfoError" class="text-danger-red font-semibold text-sm mt-3 hidden">Please fill in GF, Foreman, Job Type, and Date before sending.</p>
         </div>
 
         <div class="table-container">
@@ -474,7 +500,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v9.0.4"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v9.0.5"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -1018,6 +1044,81 @@
     }
     window.handleWoKeydown = handleWoKeydown;
 
+    // --- CUSTOM DATE PICKER ---
+    let selectedReviewDate = null; // Date object, or null if nothing picked yet
+    let calendarViewYear;
+    let calendarViewMonth; // 0-11
+
+    const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    function formatDateDisplay(date) {
+        return `${MONTH_NAMES[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    }
+
+    function openDatePicker() {
+        const base = selectedReviewDate || new Date();
+        calendarViewYear = base.getFullYear();
+        calendarViewMonth = base.getMonth();
+        renderCalendarGrid();
+        const modal = document.getElementById('date-picker-modal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+    window.openDatePicker = openDatePicker;
+
+    function closeDatePicker() {
+        const modal = document.getElementById('date-picker-modal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+    window.closeDatePicker = closeDatePicker;
+
+    function changeCalendarMonth(delta) {
+        calendarViewMonth += delta;
+        if (calendarViewMonth < 0) { calendarViewMonth = 11; calendarViewYear--; }
+        if (calendarViewMonth > 11) { calendarViewMonth = 0; calendarViewYear++; }
+        renderCalendarGrid();
+    }
+    window.changeCalendarMonth = changeCalendarMonth;
+
+    function renderCalendarGrid() {
+        document.getElementById('calendarMonthLabel').innerText = `${MONTH_NAMES[calendarViewMonth]} ${calendarViewYear}`;
+
+        const firstDayOfWeek = new Date(calendarViewYear, calendarViewMonth, 1).getDay();
+        const daysInMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+        const today = new Date();
+
+        let cells = '';
+        for (let i = 0; i < firstDayOfWeek; i++) {
+            cells += `<div></div>`;
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+            const isToday = today.getFullYear() === calendarViewYear && today.getMonth() === calendarViewMonth && today.getDate() === day;
+            const isSelected = selectedReviewDate && selectedReviewDate.getFullYear() === calendarViewYear && selectedReviewDate.getMonth() === calendarViewMonth && selectedReviewDate.getDate() === day;
+            let btnClass = 'py-2 rounded-lg text-sm font-semibold transition hover:bg-blue-50';
+            if (isSelected) btnClass += ' bg-primary-blue text-white hover:bg-blue-700';
+            else if (isToday) btnClass += ' border-2 border-primary-blue text-primary-blue';
+            else btnClass += ' text-gray-700';
+            cells += `<button type="button" onclick="selectCalendarDate(${day})" class="${btnClass}">${day}</button>`;
+        }
+        document.getElementById('calendarGrid').innerHTML = cells;
+    }
+
+    function selectCalendarDate(day) {
+        selectedReviewDate = new Date(calendarViewYear, calendarViewMonth, day);
+        document.getElementById('dateDisplayBtn').innerText = formatDateDisplay(selectedReviewDate);
+        closeDatePicker();
+    }
+    window.selectCalendarDate = selectCalendarDate;
+
+    function selectCalendarToday() {
+        const today = new Date();
+        selectedReviewDate = today;
+        document.getElementById('dateDisplayBtn').innerText = formatDateDisplay(selectedReviewDate);
+        closeDatePicker();
+    }
+    window.selectCalendarToday = selectCalendarToday;
+
     // --- REVIEW & EXPORT ---
     function goToReview() {
         if (cart.length === 0) return showCustomAlert("Review list is empty.");
@@ -1055,7 +1156,7 @@
         const foremanName = document.getElementById('foremanNameInput').value.trim();
         const jobType = document.getElementById('jobTypeInput').value;
 
-        if (!gfName || !foremanName || !jobType) {
+        if (!gfName || !foremanName || !jobType || !selectedReviewDate) {
             document.getElementById('reviewInfoError').classList.remove('hidden');
             return;
         }
