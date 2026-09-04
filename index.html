@@ -454,7 +454,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v9.0.1"; // EXPERIMENTAL BRANCH - custom WO autocomplete test. Separate from the 8.1.x line.
+    const APP_VERSION = "v9.0.2"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -809,7 +809,7 @@
                                        onkeydown="handleWoKeydown(event, '${safeId}')" onblur="hideWoSuggestionsSoon()">
                                 <button id="plus-${safeId}" class="p-2 border-y border-r rounded-r bg-gray-100 font-bold" onclick="quickAddFromRow('${safeId}')">+</button>
                             </div>
-                            <select id="type-${safeId}" class="p-2 border rounded text-sm w-24"><option value="" selected disabled>Type</option><option value="Issue">Issue</option><option value="Credit">Credit</option></select>
+                            <select id="type-${safeId}" class="p-2 border rounded text-sm w-24"><option value="" selected disabled>Type</option><option value="Issue">Issue</option><option value="Returned">Returned</option></select>
                             <select id="source-${safeId}" class="p-2 border rounded text-sm w-40"><option value="" selected disabled>Location</option>${locationOptions}</select>
                             <input type="number" min="1" value="1" id="qty-${safeId}" class="p-2 border rounded w-16 text-center text-sm">
                             <button class="p-2 bg-primary-blue text-white font-bold rounded hover:bg-blue-700" onclick="addToCart(${rowIndex}, '${safeId}')">Add</button>
@@ -837,7 +837,7 @@
             return;
         }
         if (!type) {
-            showCustomAlert("Please select a Type (Issue or Credit).", "Type Required");
+            showCustomAlert("Please select a Type (Issue or Returned).", "Type Required");
             return;
         }
         if (!source) {
