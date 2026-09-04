@@ -221,7 +221,27 @@
         </header>
 
         <div class="bg-gray-200 p-4 rounded-lg mb-6 border border-gray-300">
-            <p class="font-semibold text-gray-800">Total Transactions Selected: <span id="totalItemsCount" class="text-primary-blue font-extrabold">0</span></p>
+            <div class="flex flex-wrap items-center gap-x-8 gap-y-4">
+                <p class="font-semibold text-gray-800 whitespace-nowrap">Total Transactions Selected: <span id="totalItemsCount" class="text-primary-blue font-extrabold">0</span></p>
+                <div class="flex items-center gap-2">
+                    <label for="gfNameInput" class="font-semibold text-gray-800 whitespace-nowrap">GF:</label>
+                    <input type="text" id="gfNameInput" class="border-b-2 border-gray-500 bg-transparent px-1 py-0.5 focus:outline-none focus:border-primary-blue transition w-40">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="foremanNameInput" class="font-semibold text-gray-800 whitespace-nowrap">Foreman:</label>
+                    <input type="text" id="foremanNameInput" class="border-b-2 border-gray-500 bg-transparent px-1 py-0.5 focus:outline-none focus:border-primary-blue transition w-40">
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="jobTypeInput" class="font-semibold text-gray-800 whitespace-nowrap">Job Type:</label>
+                    <select id="jobTypeInput" class="border-b-2 border-gray-500 bg-transparent px-1 py-0.5 focus:outline-none focus:border-primary-blue transition">
+                        <option value="" selected disabled>Please select</option>
+                        <option value="Overhead">Overhead</option>
+                        <option value="Underground">Underground</option>
+                        <option value="Emergent">Emergent</option>
+                    </select>
+                </div>
+            </div>
+            <p id="reviewInfoError" class="text-danger-red font-semibold text-sm mt-3 hidden">Please fill in GF, Foreman, and Job Type before sending.</p>
         </div>
 
         <div class="table-container">
@@ -454,7 +474,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v9.0.2"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v9.0.4"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -809,7 +829,7 @@
                                        onkeydown="handleWoKeydown(event, '${safeId}')" onblur="hideWoSuggestionsSoon()">
                                 <button id="plus-${safeId}" class="p-2 border-y border-r rounded-r bg-gray-100 font-bold" onclick="quickAddFromRow('${safeId}')">+</button>
                             </div>
-                            <select id="type-${safeId}" class="p-2 border rounded text-sm w-24"><option value="" selected disabled>Type</option><option value="Issue">Issue</option><option value="Returned">Returned</option></select>
+                            <select id="type-${safeId}" class="p-2 border rounded text-sm w-24"><option value="" selected disabled>Type</option><option value="Issue">Issue</option><option value="Return">Return</option></select>
                             <select id="source-${safeId}" class="p-2 border rounded text-sm w-40"><option value="" selected disabled>Location</option>${locationOptions}</select>
                             <input type="number" min="1" value="1" id="qty-${safeId}" class="p-2 border rounded w-16 text-center text-sm">
                             <button class="p-2 bg-primary-blue text-white font-bold rounded hover:bg-blue-700" onclick="addToCart(${rowIndex}, '${safeId}')">Add</button>
@@ -837,7 +857,7 @@
             return;
         }
         if (!type) {
-            showCustomAlert("Please select a Type (Issue or Returned).", "Type Required");
+            showCustomAlert("Please select a Type (Issue or Return).", "Type Required");
             return;
         }
         if (!source) {
@@ -1031,6 +1051,16 @@
     };
 
     function openEmailDraft() {
+        const gfName = document.getElementById('gfNameInput').value.trim();
+        const foremanName = document.getElementById('foremanNameInput').value.trim();
+        const jobType = document.getElementById('jobTypeInput').value;
+
+        if (!gfName || !foremanName || !jobType) {
+            document.getElementById('reviewInfoError').classList.remove('hidden');
+            return;
+        }
+        document.getElementById('reviewInfoError').classList.add('hidden');
+
         const uniqueWOs = [...new Set(cart.map(i => i.wo))];
         const subject = `Material Request - WOs: ${uniqueWOs.join(', ')}`;
         const uniqueSources = [...new Set(cart.map(i => i.source).filter(Boolean))];
