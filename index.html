@@ -439,14 +439,9 @@
 
 <!-- Floating Action Button for Clearing WO History -->
 <div id="utility-buttons" class="fixed bottom-4 right-4 z-40 hidden">
-    <button onclick="confirmClearWOHistory()" 
-            title="Clear WO History Suggestions"
-            class="p-2 bg-white text-gray-400 border border-gray-200 rounded-full shadow-lg hover:text-danger-red hover:bg-red-50 hover:border-red-200 transition-all duration-200 flex items-center gap-2 group">
-        <span class="text-[10px] font-bold uppercase tracking-tighter hidden group-hover:block pl-1">Clear WO History</span>
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
-    </button>
+    <div class="w-9 h-9 flex items-center justify-center bg-white text-gray-300 border border-gray-100 rounded-full shadow-sm select-none">
+        <span class="text-xs font-bold tracking-tight">A.E</span>
+    </div>
 </div>
 
 <div id="admin-trigger" class="fixed bottom-4 left-4 z-40 hidden">
@@ -474,7 +469,7 @@
     const APP_PASSCODE = "1945"; 
     const ADMIN_PIN = "2026";
     let adminUnlocked = false;
-    const APP_VERSION = "v9.0.5"; // Update this on every new version - shows in the corner badge and on every emailed report
+    const APP_VERSION = "v9.0.8"; // Update this on every new version - shows in the corner badge and on every emailed report
 
     const LOCATIONS = [
         "Frostproof Pike Yard", "Dundee Pike Yard", "Sebring Pike Yard",
@@ -519,8 +514,10 @@
     let orderMaterial = 'wood';
     let orderSize = null;
     let orderClass = null;
-    const POLE_SIZES = ["30", "35", "40", "45", "50", "55", "60", "65"];
-    // Wood classes confirmed by user. Concrete is still PLACEHOLDER data pending confirmation.
+    const POLE_SIZES_BY_MATERIAL = {
+        wood: ["30", "35", "40", "45", "50", "55", "60", "65"],
+        concrete: ["40", "45", "50", "55", "60"]
+    };
     const POLE_CLASSES = {
         wood: {
             "30": ["6"],
@@ -532,7 +529,13 @@
             "60": ["H1"],
             "65": []
         },
-        concrete: { "30": ["6"], "35": ["5", "6"], "40": ["4", "5"], "45": ["3", "4"], "50": ["2", "3"], "55": ["2"], "60": ["1"], "65": ["1"] }
+        concrete: {
+            "40": ["H1", "H2", "H3"],
+            "45": ["H1", "H4"],
+            "50": ["H1", "H2", "H3", "H4"],
+            "55": ["H2", "H3", "H4"],
+            "60": ["H2", "H3", "H4"]
+        }
     };
 
     const STATIC_CATEGORIES = [
@@ -922,16 +925,6 @@
     }
     window.quickAddFromRow = quickAddFromRow;
 
-    function confirmClearWOHistory() {
-        showCustomConfirm("Clear saved WO suggestions?", (confirmed) => {
-            if (confirmed) {
-                woHistory = [];
-                localStorage.removeItem('woHistory');
-            }
-        });
-    }
-    window.confirmClearWOHistory = confirmClearWOHistory;
-
     // --- CUSTOM WO SUGGESTION DROPDOWN ---
     // Built to replace the native <datalist> autocomplete, which has a known bug on
     // some mobile browsers where its native popup can steal keyboard focus away from
@@ -1211,8 +1204,12 @@
 
     function renderOrderSizeGrid() {
         const grid = document.getElementById('order-size-grid');
-        grid.innerHTML = POLE_SIZES.map(sz => `
-            <button class="py-8 text-2xl font-extrabold rounded-lg bg-white text-primary-blue border-2 border-primary-blue hover:bg-blue-50 transition" onclick="pickOrderSize('${sz}')">${sz}</button>
+        const sizes = POLE_SIZES_BY_MATERIAL[orderMaterial] || [];
+        const btnClass = orderMaterial === 'concrete'
+            ? 'py-8 text-2xl font-extrabold rounded-lg bg-white text-gray-700 border-2 border-gray-400 hover:bg-gray-50 transition'
+            : 'py-8 text-2xl font-extrabold rounded-lg bg-white text-primary-blue border-2 border-primary-blue hover:bg-blue-50 transition';
+        grid.innerHTML = sizes.map(sz => `
+            <button class="${btnClass}" onclick="pickOrderSize('${sz}')">${sz}</button>
         `).join('');
     }
 
